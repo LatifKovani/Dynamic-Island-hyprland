@@ -38,7 +38,8 @@ Item {
     readonly property string bluetoothStatusIcon: "\u{F02CB}"
 
     property int batteryCapacity: SysBackend.batteryCapacity
-    property bool isCharging: SysBackend.batteryStatus === "Charging" || SysBackend.batteryStatus === "Full"
+    property bool isCharging: false
+    property bool _lowBatteryNotified: false
     property real currentVolume: -1
     property bool isMuted: false
     property real currentBrightness: -1
@@ -48,7 +49,7 @@ Item {
     property var cavaLevels: [0, 0, 0, 0, 0, 0, 0, 0]
     property var customLeftItems: []
 
-    property string _lastChargeStatus: SysBackend.batteryStatus
+    property string _lastChargeStatus: ""
     property string _pendingVolType: ""
     property real _pendingVolVal: 0.0
     property string _lastVolType: ""
@@ -77,6 +78,8 @@ Item {
     onTimeTextChanged: syncCustomLeftItems()
     onDateTextChanged: syncCustomLeftItems()
     Component.onCompleted: {
+        root.isCharging = (SysBackend.batteryStatus === "Charging" || SysBackend.batteryStatus === "Full");
+        root._lastChargeStatus = SysBackend.batteryStatus;
         syncCustomLeftItems();
         refreshMissingValues();
         updateCavaSubscription();
@@ -460,6 +463,20 @@ Item {
             }
         }
     }
+    Timer {
+        id: chargeNotificationDebounce
+        interval: 0
+        repeat: false
+        property string pendingStatus: ""
+        onTriggered: {
+            if (pendingStatus === "Charging") {
+                root._lowBatteryNotified = false;
+                root.transientRequested("\uf0e7", -1.0, "Charger connected");
+            } else if (pendingStatus === "Discharging") {
+                root.transientRequested("\uf0e7", -1.0, "Charger disconnected");
+            }
+        }
+    }
 
     Timer {
         id: brightnessDebounce
@@ -522,16 +539,30 @@ Item {
 
         function onBatteryChanged(capacity, statusString) {
             root.batteryCapacity = capacity;
-            root.isCharging = (statusString === "Charging" || statusString === "Full");
-            if (root._lastChargeStatus !== "" && root._lastChargeStatus !== statusString) {
-                if (statusString === "Charging")
-                    root.transientRequested(root.statusIcon("charging"), -1.0, "");
-                else if (statusString === "Discharging")
-                    root.transientRequested(root.statusIcon("discharging"), -1.0, "");
-            }
-            root._lastChargeStatus = statusString;
-        }
 
+            // Normalize statuses from backend
+            const normalizedStatus = (statusString === "Full") ? "Charging" : (statusString === "Not charging") ? "Discharging" : statusString;
+
+            root.isCharging = (normalizedStatus === "Charging");
+
+            console.log("BATTERY:", "old=", root._lastChargeStatus, "new=", statusString, "normalized=", normalizedStatus);
+
+            if (root._lastChargeStatus !== "" && root._lastChargeStatus !== normalizedStatus) {
+                chargeNotificationDebounce.pendingStatus = normalizedStatus;
+                chargeNotificationDebounce.restart();
+            }
+
+            root._lastChargeStatus = normalizedStatus;
+
+            if (!root.isCharging && capacity <= 25 && !root._lowBatteryNotified) {
+                root._lowBatteryNotified = true;
+                root.transientRequested("\uf244", capacity / 100.0, "Low battery");
+            }
+
+            if (!root.isCharging && capacity <= 5) {
+                root.transientRequested("\uf244", capacity / 100.0, "Critically low battery");
+            }
+        }
         function onBrightnessChanged(value) {
             root._pendingBrightnessValue = value;
             root.currentBrightness = value;
