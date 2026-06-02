@@ -29,10 +29,10 @@ Item {
     property int textPixelSize: 13
     property int iconPixelSize: 16
     property int iconBoxSize: 18
-    property int batteryIconWidth: 40
+    property int batteryIconWidth: 37
     property int batteryIconHeight: 15
-    property int batteryTipWidth: 3
-    property int batteryTipHeight: 7
+    property int batteryTipWidth: 2
+    property int batteryTipHeight: 5
     property int batteryOuterRadius: 4
     property int batteryInnerRadius: 3
     property real iconVerticalOffset: 1
@@ -80,6 +80,17 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         opacity: clampedProgress
         spacing: groupSpacing
+
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.timeText
+            color: "white"
+            font.pixelSize: root.textPixelSize + 2
+            font.family: root.timeFontFamily
+            font.weight: Font.Bold
+            font.letterSpacing: -0.25
+            verticalAlignment: Text.AlignVCenter
+        }
 
         Repeater {
             model: root.items
@@ -166,6 +177,8 @@ Item {
                         readonly property real level: Math.max(0, Math.min(100, Number(modelData.level || 0)))
                         readonly property bool charging: modelData.isCharging || false
                         readonly property color fillColor: {
+                            if (charging)
+                                return "#30d158";
                             if (level <= 5)
                                 return "#ff3b30";
                             if (level <= 25)
@@ -180,7 +193,7 @@ Item {
                             width: parent.width - root.batteryTipWidth - 1
                             height: parent.height
                             radius: root.batteryOuterRadius
-                            color: Qt.rgba(1, 1, 1, 0.68)
+                            color: Qt.rgba(1, 1, 1, 0.38)
                             border.color: Qt.rgba(1, 1, 1, 0.55)
                             border.width: 1.2
 
@@ -203,30 +216,39 @@ Item {
                                 }
                             }
 
-                            // Lightning bolt INSIDE battery (only when charging)
-                            Text {
+                            // Percentage + lightning bolt INSIDE battery (only when charging)
+                            Row {
                                 visible: batteryShape.charging
                                 anchors.centerIn: parent
-                                text: "\uf0e7"
-                                color: {
-                                    // Contrast: dark bolt on light fill, white bolt on dark/empty
-                                    const lvl = batteryShape.level;
-                                    return (lvl > 25) ? "#1a1a1a" : "white";
-                                }
-                                font.pixelSize: root.batteryIconHeight - 5
-                                font.family: root.iconFontFamily
-                                font.weight: Font.Bold
-                                verticalAlignment: Text.AlignVCenter
-                                horizontalAlignment: Text.AlignHCenter
+                                spacing: 1
                                 z: 2
+
+                                Text {
+                                    text: batteryShape.level + ""
+                                    color: "white"
+                                    font.pixelSize: root.batteryIconHeight - 3
+                                    font.family: root.textFontFamily
+                                    font.weight: Font.Bold
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+
+                                Text {
+                                    text: "\uf0e7"
+                                    color: "white"
+                                    font.pixelSize: root.batteryIconHeight - 4
+                                    font.family: root.iconFontFamily
+                                    font.weight: Font.Bold
+                                    verticalAlignment: Text.AlignVCenter
+                                }
                             }
+
                             // Percentage INSIDE battery (only when discharging)
                             Text {
                                 visible: !batteryShape.charging
                                 anchors.centerIn: parent
-                                text: batteryShape.level + "%"
-                                color: batteryShape.level > 25 ? "#1a1a1a" : "white"
-                                font.pixelSize: root.batteryIconHeight - 5
+                                text: batteryShape.level + " %"
+                                color: "black"
+                                font.pixelSize: root.batteryIconHeight - 4
                                 font.family: root.textFontFamily
                                 font.weight: Font.Bold
                                 verticalAlignment: Text.AlignVCenter
@@ -247,7 +269,6 @@ Item {
                         }
                     }
                 }
-                // REPLACE WITH:
                 Text {
                     id: valueText
                     visible: !parent.isCava && !parent.isBattery
@@ -255,6 +276,8 @@ Item {
                     anchors.leftMargin: parent.hasLeadingVisual && !parent.isBattery ? root.iconSpacing : 0
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.text || ""
+                    font.pixelSize: root.textPixelSize
+                    font.weight: Font.Bold
                     color: {
                         const id = modelData.id || "";
                         if (id === "cpu" || id === "ram") {
