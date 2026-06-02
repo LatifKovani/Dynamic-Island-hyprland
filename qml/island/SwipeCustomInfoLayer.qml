@@ -130,11 +130,29 @@ Item {
                         anchors.centerIn: parent
                         visible: parent.parent.isGlyphIcon && !parent.parent.isBattery
                         text: parent.parent.isGlyphIcon ? (modelData.icon || "") : ""
-                        color: "white"
-                        font.pixelSize: root.iconPixelSize
-                        font.family: root.iconFontFamily
-                        verticalAlignment: Text.AlignVCenter
-                        horizontalAlignment: Text.AlignHCenter
+                        color: {
+                            const id = modelData.id || "";
+                            if (id === "cpu" || id === "ram") {
+                                const txt = modelData.text || "";
+                                let level = -1;
+                                if (txt.endsWith("%")) {
+                                    level = parseFloat(txt) / 100.0;
+                                } else if (txt.indexOf("/") !== -1) {
+                                    const slash = txt.indexOf("/");
+                                    const used = parseFloat(txt.substring(0, slash));
+                                    const total = parseFloat(txt.substring(slash + 1));
+                                    if (total > 0)
+                                        level = used / total;
+                                }
+                                if (level >= 0.70)
+                                    return "#ff453a";
+                                if (level >= 0.50)
+                                    return "#ff9f0a";
+                                if (level >= 0.30)
+                                    return "#ffd60a";
+                            }
+                            return "white";
+                        }
                     }
 
                     // ── macOS Tahoe battery shape ──────────────────────────────────
@@ -162,7 +180,7 @@ Item {
                             width: parent.width - root.batteryTipWidth - 1
                             height: parent.height
                             radius: root.batteryOuterRadius
-                            color: "transparent"
+                            color: Qt.rgba(1, 1, 1, 0.68)
                             border.color: Qt.rgba(1, 1, 1, 0.55)
                             border.width: 1.2
 
@@ -229,6 +247,7 @@ Item {
                         }
                     }
                 }
+                // REPLACE WITH:
                 Text {
                     id: valueText
                     visible: !parent.isCava && !parent.isBattery
@@ -236,12 +255,30 @@ Item {
                     anchors.leftMargin: parent.hasLeadingVisual && !parent.isBattery ? root.iconSpacing : 0
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.text || ""
-                    color: "white"
-                    font.pixelSize: root.textPixelSize
-                    font.family: root.textFontFamily
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: -0.15
-                    wrapMode: Text.NoWrap
+                    color: {
+                        const id = modelData.id || "";
+                        if (id === "cpu" || id === "ram") {
+                            const txt = modelData.text || "";
+                            let level = -1;
+                            if (txt.endsWith("%")) {
+                                level = parseFloat(txt) / 100.0;
+                            } else if (txt.indexOf("/") !== -1) {
+                                // RAM: "X.X/YGB"
+                                const slash = txt.indexOf("/");
+                                const used = parseFloat(txt.substring(0, slash));
+                                const total = parseFloat(txt.substring(slash + 1));
+                                if (total > 0)
+                                    level = used / total;
+                            }
+                            if (level >= 0.70)
+                                return "#ff453a";   // red
+                            if (level >= 0.50)
+                                return "#ff9f0a";   // orange
+                            if (level >= 0.30)
+                                return "#ffd60a";   // yellow
+                        }
+                        return "white";
+                    }
                 }
             }
         }

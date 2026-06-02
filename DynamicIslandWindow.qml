@@ -337,6 +337,15 @@ PanelWindow {
         id: timeObj
     }
 
+    // Measures OSD custom text so the pill auto-sizes to fit any message
+    TextMetrics {
+        id: osdTextMetrics
+        font.family: root.textFontFamily
+        font.pixelSize: 16
+        font.weight: Font.DemiBold
+        text: islandContainer.osdCustomText
+    }
+
     // --- 灵动岛主容器与全局状态 ---
     FocusScope {
         id: islandContainer
@@ -378,7 +387,7 @@ PanelWindow {
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
         readonly property bool splitUsesExtendedLayout: splitShowsProgress || splitShowsText
-        readonly property real splitCapsuleWidth: splitShowsProgress ? 248 : (splitShowsText ? 320 : 140)
+        readonly property real splitCapsuleWidth: splitShowsProgress ? 248 : (splitShowsText ? Math.max(220, Math.min(480, osdTextMetrics.advanceWidth + 84)) : 140)
         readonly property bool canShowSideSwipe: islandState === "normal" || islandState === "custom" || islandState === "lyrics" || (islandState === "long_capsule" && workspaceOriginSide === "none")
         readonly property real rightSwipeProgress: Math.max(0, swipeTransitionProgress)
         readonly property var customLeftItems: systemState.customLeftItems
