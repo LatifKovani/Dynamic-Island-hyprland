@@ -31,13 +31,7 @@ Item {
 
         onTriggered: {
             const now = new Date();
-            const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            const day = days[now.getDay()];
-            const month = months[now.getMonth()];
-            const date = root.padTwoDigits(now.getDate());
-            const timeStr = Qt.formatTime(now, "hh:mm AP");
-            root.currentTime = day + ", " + month + " " + date + ", " + timeStr;
+            root.currentTime = Qt.formatTime(now, "hh:mm A");
             root.currentDateLabel = root.formatDateLabel(now);
             interval = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
         }

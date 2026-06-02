@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import IslandBackend
 
 Item {
@@ -23,9 +24,9 @@ Item {
     property real horizontalPadding: 14
     property real hiddenLeftPadding: 18
     property real hiddenRightPadding: 18
-    property real groupSpacing: 16
-    property real iconSpacing: 8
-    property int textPixelSize: 16
+    property real groupSpacing: 20
+    property real iconSpacing: 2
+    property int textPixelSize: 13
     property int iconPixelSize: 16
     property int iconBoxSize: 18
     property int batteryIconWidth: 30
@@ -50,14 +51,8 @@ Item {
     readonly property real itemsX: centeredItemsX + (1 - clampedProgress) * dragDistance
     readonly property real timeX: centeredTimeX - clampedProgress * dragDistance
     readonly property real visibleTimeWidth: Math.min(textWidth, Math.max(0, timeMetrics.advanceWidth))
-    readonly property real timeRecordingDotX: Math.max(
-        4,
-        timeX + (textWidth - visibleTimeWidth) / 2 - recordingDotSpacing - timeRecordingIndicator.width
-    )
-    readonly property real preferredWidth: Math.max(
-        minimumWidth,
-        Math.min(Math.max(minimumWidth, maximumWidth), contentRow.implicitWidth + horizontalPadding * 2 + 28)
-    )
+    readonly property real timeRecordingDotX: Math.max(4, timeX + (textWidth - visibleTimeWidth) / 2 - recordingDotSpacing - timeRecordingIndicator.width)
+    readonly property real preferredWidth: Math.max(minimumWidth, Math.min(Math.max(minimumWidth, maximumWidth), contentRow.implicitWidth + horizontalPadding * 2 + 28))
 
     anchors.fill: parent
     clip: true
@@ -90,14 +85,15 @@ Item {
             model: root.items
 
             delegate: Item {
-                readonly property bool hasIcon: modelData.icon !== ""
+                readonly property bool hasIcon: modelData.icon !== undefined && modelData.icon !== ""
                 readonly property bool isCava: modelData.kind === "cava"
                 readonly property bool isBattery: modelData.kind === "battery"
+                // "theme" = system icon via Quickshell.iconPath (Image)
+                // "glyph" = Nerd Font character (Text)
+                readonly property bool isThemeIcon: hasIcon && modelData.iconKind === "theme"
+                readonly property bool isGlyphIcon: hasIcon && modelData.iconKind !== "theme"
                 readonly property bool hasLeadingVisual: hasIcon || isBattery
-                implicitWidth: isCava
-                    ? cavaBars.implicitWidth
-                    : (isBattery && modelData.isCharging ? (chargingIcon.implicitWidth + 4) : 0)
-                      + leadingVisual.width + (hasLeadingVisual ? root.iconSpacing : 0) + valueText.implicitWidth
+                implicitWidth: isCava ? cavaBars.implicitWidth : (isBattery && modelData.isCharging ? (chargingIcon.implicitWidth + 4) : 0) + leadingVisual.width + (hasLeadingVisual ? root.iconSpacing : 0) + valueText.implicitWidth
                 implicitHeight: root.height
                 width: implicitWidth
                 height: implicitHeight
@@ -129,16 +125,30 @@ Item {
                     anchors.leftMargin: parent.isBattery ? root.iconSpacing : 0
                     anchors.verticalCenter: parent.verticalCenter
 
+                    // System theme icon (e.g. app icons from your icon theme)
+                    Image {
+                        anchors.centerIn: parent
+                        visible: parent.parent.isThemeIcon && !parent.parent.isBattery
+                        width: root.iconBoxSize
+                        height: root.iconBoxSize
+                        source: (parent.parent.isThemeIcon && modelData.icon) ? Quickshell.iconPath(modelData.icon, true) : ""
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                    }
+
+                    // Nerd Font glyph icon (e.g. CPU, RAM, volume, brightness)
                     Text {
                         anchors.centerIn: parent
-                        anchors.verticalCenterOffset: root.iconVerticalOffset
-                        visible: parent.parent.hasIcon && !parent.parent.isBattery
-                        text: modelData.icon || ""
+                        visible: parent.parent.isGlyphIcon && !parent.parent.isBattery
+                        text: parent.parent.isGlyphIcon ? (modelData.icon || "") : ""
                         color: "white"
                         font.pixelSize: root.iconPixelSize
                         font.family: root.iconFontFamily
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
                     }
 
+                    // Battery shape
                     Item {
                         visible: parent.parent.isBattery
                         width: root.batteryIconWidth
@@ -162,8 +172,10 @@ Item {
                                 width: Math.max(0, (parent.width - 4) * (Math.max(0, Math.min(100, Number(modelData.level || 0))) / 100.0))
                                 color: {
                                     const level = Math.max(0, Math.min(100, Number(modelData.level || 0)));
-                                    if (level <= 10) return "#ff3b30";
-                                    if (level <= 20) return "#ffcc00";
+                                    if (level <= 10)
+                                        return "#ff3b30";
+                                    if (level <= 20)
+                                        return "#ffcc00";
                                     return "#34c759";
                                 }
 
@@ -188,14 +200,10 @@ Item {
                 }
 
                 Text {
-                    visible: !parent.isCava
                     id: valueText
-                    anchors.left: parent.isBattery 
-                        ? (chargingIcon.visible ? chargingIcon.right : parent.left)
-                        : leadingVisual.right
-                    anchors.leftMargin: (parent.isBattery && chargingIcon.visible) 
-                        ? 4 
-                        : (parent.hasLeadingVisual && !parent.isBattery ? root.iconSpacing : 0)
+                    visible: !parent.isCava
+                    anchors.left: parent.isBattery ? (chargingIcon.visible ? chargingIcon.right : parent.left) : leadingVisual.right
+                    anchors.leftMargin: (parent.isBattery && chargingIcon.visible) ? 4 : (parent.hasLeadingVisual && !parent.isBattery ? root.iconSpacing : 0)
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.text || ""
                     color: "white"
@@ -211,10 +219,7 @@ Item {
 
     RecordingIndicator {
         id: timeRecordingIndicator
-        active: root.recordingActive
-            && root.showSecondaryText
-            && root.timeText !== ""
-            && root.clampedProgress < 0.001
+        active: root.recordingActive && root.showSecondaryText && root.timeText !== "" && root.clampedProgress < 0.001
         contentOpacity: 1 - root.clampedProgress
         x: root.timeRecordingDotX
         anchors.verticalCenter: parent.verticalCenter

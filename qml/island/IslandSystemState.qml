@@ -1,6 +1,7 @@
 import QtQuick
-import IslandBackend
 import Quickshell.Hyprland
+import Quickshell.Io
+import IslandBackend
 
 Item {
     id: root
@@ -16,6 +17,8 @@ Item {
     property string dateText: "Mon, Jan 01"
     property int currentWorkspace: 1
     property bool customSwipeActive: false
+    property real _ramTotalGb: 0
+    property real _ramUsedGb: 0
 
     readonly property var configuredLeftSwipeIds: buildNormalizedSwipeItemIds(configuredLeftSwipeItems)
     readonly property bool usesSystemStatsModule: configuredLeftSwipeIds.indexOf("cpu") !== -1 || configuredLeftSwipeIds.indexOf("ram") !== -1
@@ -41,13 +44,7 @@ Item {
     property real currentBrightness: -1
     property real currentCpuUsage: -1
     property real currentRamUsage: -1
-    property string currentActiveApp: {
-        const client = Hyprland.focusedClient;
-        if (!client)
-            return "";
-        const cls = client.lastIpcObject ? (client.lastIpcObject["class"] || "") : "";
-        return cls.length > 0 ? cls.charAt(0).toUpperCase() + cls.slice(1) : "";
-    }
+    property string currentActiveApp: ""
     property var cavaLevels: [0, 0, 0, 0, 0, 0, 0, 0]
     property var customLeftItems: []
 
@@ -59,6 +56,7 @@ Item {
     property bool _bluetoothVolumeSuppressed: false
     property real _pendingBrightnessValue: 0.0
     property string _customLeftItemsSignature: ""
+    property string _memInfoBuffer: ""
 
     onConfiguredLeftSwipeIdsChanged: {
         syncCustomLeftItems();
@@ -86,6 +84,48 @@ Item {
 
     Component.onDestruction: {
         SystemServices.setCavaClientActive(systemServicesClientId, false);
+    }
+
+    // Read RAM from /proc/meminfo via FileView
+    FileView {
+        id: memInfoView
+        path: "/proc/meminfo"
+        watchChanges: false
+        preload: false
+        printErrors: false
+
+        onTextChanged: {
+            const text = memInfoView.text();
+            if (!text || text === "")
+                return;
+            const lines = text.split("\n");
+            let total = 0, available = 0;
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].startsWith("MemTotal:")) {
+                    const parts = lines[i].split(/\s+/);
+                    if (parts.length >= 2)
+                        total = parseInt(parts[1]);
+                } else if (lines[i].startsWith("MemAvailable:")) {
+                    const parts = lines[i].split(/\s+/);
+                    if (parts.length >= 2)
+                        available = parseInt(parts[1]);
+                }
+            }
+            if (total > 0) {
+                root.currentRamUsage = root.clamp01((total - available) / total);
+                root._ramTotalGb = total / (1024 * 1024);
+                root._ramUsedGb = (total - available) / (1024 * 1024);
+            }
+        }
+    }
+
+    Timer {
+        id: ramPollTimer
+        interval: 3000
+        repeat: true
+        running: root.usesSystemStatsModule
+        triggeredOnStart: true
+        onTriggered: memInfoView.reload()
     }
 
     function statusIcon(name) {
@@ -185,18 +225,108 @@ Item {
         return resolved;
     }
 
+    function resolveApp(cls) {
+        const lower = cls.toLowerCase();
+        const base = "/home/latif/.local/share/icons/MacTahoe/apps/scalable/";
+        switch (lower) {
+        case "org.gnome.nautilus":
+            return {
+                name: "Files",
+                icon: base + "org.gnome.Nautilus.svg",
+                iconKind: "theme"
+            };
+        case "brave-browser":
+        case "brave":
+            return {
+                name: "Brave",
+                icon: base + "brave-desktop.svg",
+                iconKind: "theme"
+            };
+        case "code":
+        case "com.visualstudio.code-oss":
+            return {
+                name: " VS Code",
+                icon: base + "com.visualstudio.code.svg",
+                iconKind: "theme"
+            };
+        case "nvim":
+        case "neovim":
+            return {
+                name: "Neovim",
+                icon: base + "neovim.svg",
+                iconKind: "theme"
+            };
+        case "com.obsproject.studio":
+            return {
+                name: " OBS",
+                icon: base + "com.obsproject.Studio.svg",
+                iconKind: "theme"
+            };
+        case "org.gnome.texteditor":
+            return {
+                name: "Text Editor",
+                icon: base + "text-editor.svg",
+                iconKind: "theme"
+            };
+        case "localsend":
+            return {
+                name: "LocalSend",
+                icon: base + "localsend.svg",
+                iconKind: "theme"
+            };
+        case "nwg-look":
+            return {
+                name: " GTK-Settings",
+                icon: base + "nwg-look.svg",
+                iconKind: "theme"
+            };
+        case "com.stremio.stremio":
+            return {
+                name: "Stremio",
+                icon: base + "com.stremio.Stremio.svg",
+                iconKind: "theme"
+            };
+        case "kitty":
+            return {
+                name: "Kitty",
+                icon: base + "kitty.svg",
+                iconKind: "theme"
+            };
+        case "discord":
+            return {
+                name: "Discord",
+                icon: base + "discord.svg",
+                iconKind: "theme"
+            };
+        case "spotify":
+            return {
+                name: "Spotify",
+                icon: base + "spotify.svg",
+                iconKind: "theme"
+            };
+        default:
+            return {
+                name: lower.charAt(0).toUpperCase() + lower.slice(1),
+                icon: "\u{F0315}",
+                iconKind: "glyph"
+            };
+        }
+    }
+
     function buildCustomSwipeItem(itemId) {
         switch (itemId) {
         case "time":
             return {
                 id: itemId,
                 icon: "",
+                iconKind: "glyph",
                 text: timeText
             };
         case "date":
             return {
                 id: itemId,
                 icon: "",
+                iconKind: "glyph",
                 text: dateText
             };
         case "battery":
@@ -208,6 +338,7 @@ Item {
                 level: Math.max(0, Math.min(100, batteryCapacity)),
                 isCharging: isCharging,
                 icon: "",
+                iconKind: "glyph",
                 text: Math.max(0, batteryCapacity) + "%"
             };
         case "volume":
@@ -216,6 +347,7 @@ Item {
             return {
                 id: itemId,
                 icon: isMuted ? statusIcon("mute") : statusIcon("volume"),
+                iconKind: "glyph",
                 text: formatPercentText(currentVolume)
             };
         case "brightness":
@@ -224,21 +356,25 @@ Item {
             return {
                 id: itemId,
                 icon: brightnessStatusIcon(currentBrightness),
+                iconKind: "glyph",
                 text: formatPercentText(currentBrightness)
             };
         case "workspace":
             return {
                 id: itemId,
                 icon: "",
+                iconKind: "glyph",
                 text: "Workspace " + currentWorkspace
             };
         case "app":
             if (currentActiveApp === "")
                 return null;
+            const appInfo = resolveApp(currentActiveApp);
             return {
                 id: itemId,
-                icon: "",
-                text: currentActiveApp
+                icon: appInfo.icon,
+                iconKind: appInfo.iconKind,
+                text: appInfo.name
             };
         case "cpu":
             if (currentCpuUsage < 0)
@@ -246,6 +382,7 @@ Item {
             return {
                 id: itemId,
                 icon: statusIcon("cpu"),
+                iconKind: "glyph",
                 text: formatPercentText(currentCpuUsage)
             };
         case "ram":
@@ -254,7 +391,8 @@ Item {
             return {
                 id: itemId,
                 icon: statusIcon("ram"),
-                text: formatPercentText(currentRamUsage)
+                iconKind: "glyph",
+                text: _ramUsedGb.toFixed(1) + "/" + _ramTotalGb.toFixed(0) + "GB"
             };
         case "cava":
             return {
@@ -274,7 +412,6 @@ Item {
             const itemId = String(source[index] || "");
             if (itemId === "")
                 continue;
-
             const nextItem = buildCustomSwipeItem(itemId);
             if (nextItem)
                 resolved.push(nextItem);
@@ -289,7 +426,7 @@ Item {
 
         for (let index = 0; index < source.length; index++) {
             const item = source[index] || {};
-            signature += String(item.id || "") + "\u001f" + String(item.kind || "") + "\u001f" + String(item.icon || "") + "\u001f" + String(item.text || "") + "\u001f" + String(item.level === undefined ? "" : item.level) + "\u001f" + String(item.isCharging === undefined ? "" : item.isCharging) + "\u001e";
+            signature += String(item.id || "") + "\u001f" + String(item.kind || "") + "\u001f" + String(item.icon || "") + "\u001f" + String(item.iconKind || "") + "\u001f" + String(item.text || "") + "\u001f" + String(item.level === undefined ? "" : item.level) + "\u001f" + String(item.isCharging === undefined ? "" : item.isCharging) + "\u001e";
         }
 
         return signature;
@@ -300,7 +437,6 @@ Item {
         const nextSignature = customSwipeItemsSignature(nextItems);
         if (nextSignature === _customLeftItemsSignature)
             return;
-
         _customLeftItemsSignature = nextSignature;
         customLeftItems = nextItems;
     }
@@ -339,30 +475,6 @@ Item {
         triggeredOnStart: true
         onTriggered: SystemServices.requestSystemStats()
     }
-    Timer {
-        id: ramPollTimer
-        interval: 3000
-        repeat: true
-        running: root.usesSystemStatsModule
-        triggeredOnStart: true
-        onTriggered: {
-            try {
-                var xhr = new XMLHttpRequest();
-                xhr.open("GET", "file:///proc/meminfo", false);
-                xhr.send();
-                var lines = xhr.responseText.split("\n");
-                var total = 0, available = 0;
-                for (var i = 0; i < lines.length; i++) {
-                    if (lines[i].startsWith("MemTotal:"))
-                        total = parseInt(lines[i].replace(/[^0-9]/g, ""));
-                    else if (lines[i].startsWith("MemAvailable:"))
-                        available = parseInt(lines[i].replace(/[^0-9]/g, ""));
-                }
-                if (total > 0)
-                    root.currentRamUsage = root.clamp01((total - available) / total);
-            } catch (e) {}
-        }
-    }
 
     Connections {
         target: SystemServices
@@ -380,13 +492,11 @@ Item {
         }
 
         function onSystemStatsReady(cpuUsage, ramUsage, errorString) {
-            console.log("STATS:", cpuUsage, ramUsage, errorString);
             if (errorString !== "")
                 return;
             if (cpuUsage >= 0)
                 root.currentCpuUsage = root.clamp01(cpuUsage);
-            if (ramUsage >= 0)
-                root.currentRamUsage = root.clamp01(ramUsage);
+            // ramUsage from backend is always -1 (bug), so we use FileView instead
         }
 
         function onCavaLevelsChanged() {
@@ -401,10 +511,8 @@ Item {
             const nextVolType = isMuted ? "MUTE" : "VOL";
             const nextVolValue = root.clamp01(volPercentage / 100.0);
             const unchanged = root.isMuted === isMuted && Math.abs(root.currentVolume - nextVolValue) <= 0.001 && root._pendingVolType === nextVolType && Math.abs(root._pendingVolVal - nextVolValue) <= 0.001;
-
             if (unchanged)
                 return;
-
             root._pendingVolType = nextVolType;
             root._pendingVolVal = nextVolValue;
             root.currentVolume = nextVolValue;
@@ -442,8 +550,19 @@ Item {
     Connections {
         target: Hyprland
         function onRawEvent(event) {
-            if (event && (event.name === "activewindow" || event.name === "activewindowv2"))
-                Qt.callLater(() => root.syncCustomLeftItems());
+            if (!event)
+                return;
+            // activewindow event format: "class,title"
+            if (event.name === "activewindow") {
+                const args = event.parse(2);
+                if (args.length >= 1) {
+                    const cls = String(args[0] || "").trim();
+                    if (cls !== "" && cls !== root.currentActiveApp) {
+                        // Store raw class name (lowercase) for resolveApp lookup
+                        root.currentActiveApp = cls.toLowerCase();
+                    }
+                }
+            }
         }
     }
 }
