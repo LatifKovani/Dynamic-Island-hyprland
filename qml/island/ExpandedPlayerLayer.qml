@@ -52,14 +52,17 @@ Item {
 
     function visualizerLevel(index) {
         const phase = visualizerPhase + index * 0.78;
-        const primary = (Math.sin(phase) + 1) * 0.5;
-        const secondary = (Math.sin(phase * 2 + index * 0.95) + 1) * 0.5;
-        return 0.22 + primary * 0.42 + secondary * 0.24;
+        return 0.22 + ((Math.sin(phase) + 1) * 0.5) * 0.42 + ((Math.sin(phase * 2 + index * 0.95) + 1) * 0.5) * 0.24;
     }
 
     function pausedVisualizerLevel(index) {
-        const levels = [0.34, 0.58, 0.82, 0.58, 0.34];
-        return levels[index] || 0.4;
+        return [0.34, 0.58, 0.82, 0.58, 0.34][index] || 0.4;
+    }
+
+    // Format microseconds → "m:ss"  (MPRIS2 uses µs natively)
+    function formatUs(us) {
+        const s = Math.max(0, Math.floor(us / 1000000));
+        return Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
     }
 
     function togglePlayback() {
@@ -104,7 +107,7 @@ Item {
         anchors.fill: parent
         spacing: 10
 
-        // ── LEFT: Album art ──────────────────────────────────────────
+        // ── Album art ────────────────────────────────────────────────
         Item {
             id: artWrapper
             width: 96
@@ -128,7 +131,6 @@ Item {
                     smooth: true
                     mipmap: true
                 }
-
                 Text {
                     anchors.centerIn: parent
                     visible: currentArtUrl === ""
@@ -138,7 +140,6 @@ Item {
                     color: Qt.rgba(1, 1, 1, 0.2)
                 }
             }
-
             Rectangle {
                 id: artMask
                 anchors.fill: parent
@@ -147,7 +148,6 @@ Item {
                 visible: false
                 layer.enabled: true
             }
-
             OpacityMask {
                 anchors.fill: parent
                 source: artSource
@@ -155,7 +155,7 @@ Item {
             }
         }
 
-        // ── CENTER: Track info + progress + controls ─────────────────
+        // ── Track info + progress + controls ────────────────────────
         Column {
             width: 210
             anchors.verticalCenter: parent.verticalCenter
@@ -169,7 +169,6 @@ Item {
                 Column {
                     width: 150
                     spacing: 2
-
                     Text {
                         text: currentTrack
                         color: "white"
@@ -181,7 +180,6 @@ Item {
                         wrapMode: Text.WordWrap
                         maximumLineCount: 2
                     }
-
                     Text {
                         text: currentArtist
                         color: Qt.rgba(1, 1, 1, 0.45)
@@ -194,16 +192,14 @@ Item {
                 }
 
                 Row {
-                    id: vizRow
                     height: 18
                     spacing: 3
                     anchors.verticalCenter: parent.verticalCenter
-
                     Repeater {
                         model: 5
                         delegate: Rectangle {
                             width: 3
-                            height: isPlaying ? 4 + (18 - 4) * visualizerLevel(index) : 4 + (18 - 4) * pausedVisualizerLevel(index)
+                            height: isPlaying ? 4 + 14 * visualizerLevel(index) : 4 + 14 * pausedVisualizerLevel(index)
                             radius: 1.5
                             color: isPlaying ? "#b56cff" : "#5f4b72"
                             anchors.verticalCenter: parent.verticalCenter
@@ -223,42 +219,93 @@ Item {
                 }
             }
 
-            // Progress bar
+            // ── Seekable progress bar ────────────────────────────────
             Item {
+                id: progressBarItem
                 width: 160
                 height: 20
+
+                property bool isDragging: false
+                property real dragProgress: 0
+                // During scrub show drag position, otherwise real playback position
+                readonly property real displayProgress: isDragging ? dragProgress : trackProgress
 
                 Text {
                     id: tL
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    text: timePlayed
-                    color: Qt.rgba(1, 1, 1, 0.4)
+                    // Show drag-target time while scrubbing
+                    text: progressBarItem.isDragging ? root.formatUs(progressBarItem.dragProgress * (activePlayer ? activePlayer.length : 0)) : timePlayed
+                    color: Qt.rgba(1, 1, 1, progressBarItem.isDragging ? 0.75 : 0.4)
                     font.pixelSize: 12
                     font.family: textFontFamily
                     font.weight: Font.Medium
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 120
+                        }
+                    }
                 }
 
                 Rectangle {
+                    id: progressTrack
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.left: tL.right
                     anchors.right: tR.left
                     anchors.leftMargin: 5
                     anchors.rightMargin: 5
-                    height: 4
-                    radius: 2
+                    // Grows slightly on hover or while dragging
+                    height: seekMouseArea.containsMouse || progressBarItem.isDragging ? 6 : 4
+                    radius: height / 2
                     color: Qt.rgba(1, 1, 1, 0.12)
+                    Behavior on height {
+                        NumberAnimation {
+                            duration: 120
+                            easing.type: Easing.OutCubic
+                        }
+                    }
 
+                    // Filled portion
                     Rectangle {
                         height: parent.height
                         radius: parent.radius
                         color: "white"
-                        width: parent.width * trackProgress
+                        width: parent.width * progressBarItem.displayProgress
+                        // Disable smooth animation while dragging for instant response
                         Behavior on width {
+                            enabled: !progressBarItem.isDragging
                             NumberAnimation {
                                 duration: 500
                                 easing.type: Easing.OutCubic
                             }
+                        }
+                    }
+
+                    // Seek knob — appears on hover and while dragging
+                    Rectangle {
+                        id: seekKnob
+                        width: 10
+                        height: 10
+                        radius: 5
+                        color: "white"
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: seekMouseArea.containsMouse || progressBarItem.isDragging
+                        // Clamped so the knob never overflows the track ends
+                        x: Math.max(0, Math.min(parent.width - width, parent.width * progressBarItem.displayProgress - width / 2))
+                        Behavior on x {
+                            enabled: !progressBarItem.isDragging
+                            NumberAnimation {
+                                duration: 500
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+                        layer.enabled: true
+                        layer.effect: DropShadow {
+                            radius: 4
+                            samples: 9
+                            color: Qt.rgba(0, 0, 0, 0.45)
+                            horizontalOffset: 0
+                            verticalOffset: 1
                         }
                     }
                 }
@@ -273,13 +320,48 @@ Item {
                     font.family: textFontFamily
                     font.weight: Font.Medium
                 }
+
+                // Transparent overlay covering the full 160×20 item so the user
+                // doesn't have to click precisely on the thin 4px track line.
+                MouseArea {
+                    id: seekMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    preventStealing: true
+                    cursorShape: Qt.PointingHandCursor
+
+                    // Convert mouse-X (progressBarItem coords) to a [0,1] fraction
+                    function fraction(mx) {
+                        return Math.max(0, Math.min(1, (mx - progressTrack.x) / progressTrack.width));
+                    }
+
+                    onPressed: m => {
+                        progressBarItem.isDragging = true;
+                        progressBarItem.dragProgress = fraction(m.x);
+                        root.controlPressed(); // suppress capsule-level click handler
+                    }
+
+                    onPositionChanged: m => {
+                        if (pressed)
+                            progressBarItem.dragProgress = fraction(m.x);
+                    }
+
+                    onReleased: m => {
+                        if (activePlayer && activePlayer.canSeek && activePlayer.length > 0) {
+                            // MPRIS2 Seek() takes a signed delta in microseconds.
+                            const targetUs = Math.round(progressBarItem.dragProgress * activePlayer.length);
+                            activePlayer.seek(targetUs - activePlayer.position);
+                        }
+                        progressBarItem.isDragging = false;
+                    }
+
+                    onCanceled: {
+                        progressBarItem.isDragging = false;
+                    }
+                }
             }
 
-            // Controls
-            // Fix 4: removed "m.accepted = true" from onPressed so that
-            // onClicked fires normally. controlPressed() still runs on press
-            // (to suppress the capsule-level click) but the event is NOT
-            // consumed, which is what was silently blocking the click action.
+            // ── Playback controls ────────────────────────────────────
             Item {
                 width: 160
                 height: 28
@@ -290,7 +372,6 @@ Item {
                     spacing: 24
                     height: 28
 
-                    // Previous
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "\u23ee"
@@ -303,13 +384,12 @@ Item {
                                 duration: 80
                             }
                         }
-
                         MouseArea {
                             id: prevTap
                             anchors.fill: parent
                             anchors.margins: -8
                             preventStealing: true
-                            onPressed: root.controlPressed()   // Fix 4: no m.accepted
+                            onPressed: root.controlPressed()
                             onClicked: {
                                 if (activePlayer)
                                     activePlayer.previous();
@@ -317,7 +397,6 @@ Item {
                         }
                     }
 
-                    // Play / Pause
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: isPlaying ? "\u23f8" : "\u25b6"
@@ -330,18 +409,16 @@ Item {
                                 duration: 80
                             }
                         }
-
                         MouseArea {
                             id: playTap
                             anchors.fill: parent
                             anchors.margins: -8
                             preventStealing: true
-                            onPressed: root.controlPressed()   // Fix 4: no m.accepted
+                            onPressed: root.controlPressed()
                             onClicked: togglePlayback()
                         }
                     }
 
-                    // Next
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "\u23ed"
@@ -354,13 +431,12 @@ Item {
                                 duration: 80
                             }
                         }
-
                         MouseArea {
                             id: nextTap
                             anchors.fill: parent
                             anchors.margins: -8
                             preventStealing: true
-                            onPressed: root.controlPressed()   // Fix 4: no m.accepted
+                            onPressed: root.controlPressed()
                             onClicked: {
                                 if (activePlayer)
                                     activePlayer.next();
@@ -371,7 +447,7 @@ Item {
             }
         }
 
-        // ── RIGHT: Calendar ──────────────────────────────────────────
+        // ── Calendar ─────────────────────────────────────────────────
         Column {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 5
@@ -383,7 +459,6 @@ Item {
                 Item {
                     width: 65
                     height: 36
-
                     Text {
                         anchors.centerIn: parent
                         text: _shortMonths[_todayMonth]
@@ -400,7 +475,6 @@ Item {
                     delegate: Item {
                         width: 26
                         height: 36
-
                         Text {
                             anchors.top: parent.top
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -411,13 +485,11 @@ Item {
                             font.weight: Font.Medium
                             font.letterSpacing: 0.2
                         }
-
                         Item {
                             anchors.bottom: parent.bottom
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: 22
                             height: 22
-
                             Text {
                                 anchors.centerIn: parent
                                 text: modelData.dayNum
