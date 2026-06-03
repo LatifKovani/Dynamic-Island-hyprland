@@ -12,6 +12,7 @@ import "qml/workspace"
 PanelWindow {
     id: root
     property var shellRootController: null
+    readonly property alias islandContainerRef: islandContainer
     property string overviewPhase: "closed"
     property bool overviewPreloading: false
     readonly property bool overviewPreparing: overviewPhase === "preparing"
@@ -79,9 +80,9 @@ PanelWindow {
     implicitHeight: root.overviewVisible ? Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(4 + root.overviewCapsuleHeight + 8), Math.ceil(root.controlCenterWindowHeight)) : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight))
     exclusiveZone: 45
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive)
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible)
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     readonly property string iconFontFamily: userConfig.iconFontFamily
     readonly property string textFontFamily: userConfig.textFontFamily
     readonly property string heroFontFamily: userConfig.heroFontFamily
@@ -382,7 +383,7 @@ PanelWindow {
         readonly property int notificationAutoHideInterval: 4200
         readonly property int bluetoothExpandedAutoHideInterval: 2500
         readonly property int swipeAnimationDuration: 220
-        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification"
+        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu"
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
@@ -398,6 +399,8 @@ PanelWindow {
         readonly property bool bluetoothExpandedLayerVisible: !root.overviewVisible && islandState === "bluetooth_expanded"
         readonly property bool notificationLayerVisible: !root.overviewVisible && islandState === "notification"
         readonly property bool controlCenterLayerVisible: !root.overviewVisible && islandState === "control_center"
+        readonly property bool powerMenuLayerVisible: !root.overviewVisible && islandState === "power_menu"
+
         readonly property var activePlayer: mediaController.activePlayer
         readonly property string lyricsDisplayText: mediaController.displayText
         readonly property string currentTrack: mediaController.currentTrack
@@ -496,16 +499,16 @@ PanelWindow {
         }
 
         Keys.onPressed: event => {
+            if (islandContainer.powerMenuLayerVisible) {
+                if (event.key === Qt.Key_Escape) {
+                    islandContainer.smartRestoreState();
+                    event.accepted = true;
+                }
+                return;
+            }
+
             if (!root.overviewVisible)
                 return;
-
-            if ((event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier)) || event.key === Qt.Key_Backtab) {
-                hyprDispatch.focusWorkspace("r-1");
-                event.accepted = true;
-            } else if (event.key === Qt.Key_Tab) {
-                hyprDispatch.focusWorkspace("r+1");
-                event.accepted = true;
-            }
         }
 
         function handleConfiguredClickAction(actionName) {
@@ -564,6 +567,12 @@ PanelWindow {
                 return;
             case "restoreRestingCapsule":
                 smartRestoreState();
+                return;
+            case "togglePowerMenu":
+                if (islandState === "power_menu")
+                    smartRestoreState();
+                else
+                    showPowerMenu();
                 return;
             default:
             }
@@ -916,6 +925,15 @@ PanelWindow {
             restartAutoHideTimer(bluetoothExpandedAutoHideInterval);
         }
 
+        function showPowerMenu() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "power_menu";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
         function showControlCenter() {
             cancelSideSwipeSettle();
             abortSideTransientMode();
@@ -1040,7 +1058,10 @@ PanelWindow {
                     return islandContainer.lyricsCapsuleWidth;
                 case "control_center":
                     return 420;
+                case "power_menu":
+                    return 420;
                 case "expanded":
+                    return 620;
                 case "bluetooth_expanded":
                     return 400;
                 case "notification":
@@ -1058,7 +1079,10 @@ PanelWindow {
                 switch (islandContainer.islandState) {
                 case "control_center":
                     return 320 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
+                case "power_menu":
+                    return 130;
                 case "expanded":
+                    return 165;
                 case "bluetooth_expanded":
                     return 165;
                 case "notification":
@@ -1073,6 +1097,8 @@ PanelWindow {
 
                 switch (islandContainer.islandState) {
                 case "control_center":
+                    return 34;
+                case "power_menu":
                     return 34;
                 case "expanded":
                 case "bluetooth_expanded":
@@ -1543,6 +1569,22 @@ PanelWindow {
                         textFontFamily: root.textFontFamily
                         heroFontFamily: root.heroFontFamily
                         showCondition: true
+                    }
+                }
+            }
+            Loader {
+                id: powerMenuLoader
+                anchors.fill: parent
+                active: islandContainer.powerMenuLayerVisible
+                asynchronous: false
+                visible: active
+
+                sourceComponent: Component {
+                    PowerMenuLayer {
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        showCondition: islandContainer.powerMenuLayerVisible
+                        onCloseRequested: islandContainer.smartRestoreState()
                     }
                 }
             }

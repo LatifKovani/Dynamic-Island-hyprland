@@ -5,7 +5,7 @@ import Quickshell.Services.Mpris
 Item {
     id: root
 
-    signal controlPressed()
+    signal controlPressed
 
     readonly property var userConfig: UserConfig
 
@@ -21,7 +21,31 @@ Item {
     property string textFontFamily: userConfig.textFontFamily
     property real visualizerPhase: 0
 
+    readonly property var _now: new Date()
+    readonly property int _todayDay: _now.getDate()
+    readonly property int _todayMonth: _now.getMonth()
+    readonly property int _todayYear: _now.getFullYear()
+    readonly property int _todayDow: _now.getDay()
+    readonly property var _shortMonths: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    readonly property var _fullDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
     readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
+
+    function buildWeekRow() {
+        const days = [];
+        const startOffset = _todayDow;
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(_todayYear, _todayMonth, _todayDay - startOffset + i);
+            const isToday = d.getDate() === _todayDay && d.getMonth() === _todayMonth;
+            const dow = d.getDay();
+            days.push({
+                dayNum: d.getDate(),
+                dayLabel: isToday ? _fullDays[dow] : _fullDays[dow].charAt(0),
+                isToday: isToday
+            });
+        }
+        return days;
+    }
 
     function visualizerLevel(index) {
         const phase = visualizerPhase + index * 0.78;
@@ -36,23 +60,23 @@ Item {
     }
 
     function togglePlayback() {
-        if (!activePlayer || !activePlayer.canControl) return;
-
+        if (!activePlayer || !activePlayer.canControl)
+            return;
         if (activePlayer.canTogglePlaying) {
             activePlayer.togglePlaying();
             return;
         }
-
         if (activePlayer.playbackState === MprisPlaybackState.Playing) {
-            if (activePlayer.canPause) activePlayer.pause();
+            if (activePlayer.canPause)
+                activePlayer.pause();
             return;
         }
-
-        if (activePlayer.canPlay) activePlayer.play();
+        if (activePlayer.canPlay)
+            activePlayer.play();
     }
 
     anchors.fill: parent
-    anchors.margins: 20
+    anchors.margins: 12
     opacity: showCondition ? 1 : 0
 
     Behavior on opacity {
@@ -68,314 +92,318 @@ Item {
         running: showCondition && isPlaying
         onTriggered: {
             visualizerPhase += 0.18;
-            if (visualizerPhase > Math.PI * 2) visualizerPhase -= Math.PI * 2;
+            if (visualizerPhase > Math.PI * 2)
+                visualizerPhase -= Math.PI * 2;
         }
     }
 
-    Column {
+    Row {
         anchors.fill: parent
-        spacing: 14
+        spacing: 10
 
-        Item {
-            width: parent.width
-            height: 60
+        // ── LEFT: Album art ──────────────────────────────────────────
+        Rectangle {
+            width: 118
+            height: 118
+            radius: 20
+            color: "#2c2c2e"
+            anchors.verticalCenter: parent.verticalCenter
+            layer.enabled: true
+            layer.smooth: true
 
+            Image {
+                anchors.fill: parent
+                source: currentArtUrl
+                fillMode: Image.PreserveAspectCrop
+                visible: source.toString() !== ""
+                sourceSize: Qt.size(236, 236)
+            }
+
+            Text {
+                anchors.centerIn: parent
+                visible: currentArtUrl === ""
+                text: "\uf001"
+                font.family: iconFontFamily
+                font.pixelSize: 28
+                color: Qt.rgba(1, 1, 1, 0.2)
+            }
+        }
+
+        // ── CENTER: Track info + progress + controls ─────────────────
+        Column {
+            width: 200
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 9
+
+            // Track name + visualizer
             Row {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 16
-
-                Rectangle {
-                    width: 60
-                    height: 60
-                    radius: 14
-                    color: "#2c2c2e"
-                    clip: true
-
-                    Image {
-                        anchors.fill: parent
-                        source: currentArtUrl
-                        fillMode: Image.PreserveAspectCrop
-                        visible: source.toString() !== ""
-                        sourceSize: Qt.size(120, 120)
-                    }
-                }
+                width: parent.width
+                spacing: 6
 
                 Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 4
+                    width: parent.width - vizRow.width - 6
+                    spacing: 2
 
                     Text {
                         text: currentTrack
                         color: "white"
-                        font.pixelSize: 16
+                        font.pixelSize: 13
                         font.family: textFontFamily
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: -0.15
-                        width: 180
+                        font.weight: Font.SemiBold
+                        font.letterSpacing: -0.3
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 2
                         elide: Text.ElideRight
                     }
 
                     Text {
                         text: currentArtist
-                        color: "#8e8e93"
-                        font.pixelSize: 14
+                        color: Qt.rgba(1, 1, 1, 0.45)
+                        font.pixelSize: 11
                         font.family: textFontFamily
-                        font.weight: Font.Medium
-                        width: 200
+                        font.weight: Font.Regular
+                        width: parent.width
                         elide: Text.ElideRight
                     }
                 }
-            }
-
-            Item {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                width: 44
-                height: 22
 
                 Row {
-                    anchors.centerIn: parent
-                    height: parent.height
-                    spacing: 4
+                    id: vizRow
+                    height: 18
+                    spacing: 3
+                    anchors.verticalCenter: parent.verticalCenter
 
                     Repeater {
                         model: 5
-
                         delegate: Rectangle {
-                            width: 4
-                            height: isPlaying
-                                ? 6 + (parent.height - 6) * visualizerLevel(index)
-                                : 6 + (parent.height - 6) * pausedVisualizerLevel(index)
-                            radius: 2
+                            width: 3
+                            height: isPlaying ? 4 + (18 - 4) * visualizerLevel(index) : 4 + (18 - 4) * pausedVisualizerLevel(index)
+                            radius: 1.5
                             color: isPlaying ? "#b56cff" : "#5f4b72"
                             anchors.verticalCenter: parent.verticalCenter
-
                             Behavior on height {
                                 NumberAnimation {
-                                    duration: isPlaying ? 120 : 260
+                                    duration: 120
                                     easing.type: Easing.InOutQuad
                                 }
                             }
-
                             Behavior on color {
                                 ColorAnimation {
-                                    duration: isPlaying ? 140 : 280
-                                    easing.type: Easing.InOutQuad
+                                    duration: 140
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        Item {
-            width: parent.width
-            height: 16
+            // Progress bar
+            Item {
+                width: parent.width
+                height: 12
 
-            Text {
-                id: timeL
-                anchors.left: parent.left
-                text: timePlayed
-                color: "#8e8e93"
-                font.pixelSize: 12
-                font.family: textFontFamily
-                font.weight: Font.Medium
-            }
-
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left: timeL.right
-                anchors.right: timeR.left
-                anchors.margins: 12
-                height: 6
-                radius: 3
-                color: "#333333"
+                Text {
+                    id: tL
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: timePlayed
+                    color: Qt.rgba(1, 1, 1, 0.4)
+                    font.pixelSize: 9
+                    font.family: textFontFamily
+                    font.weight: Font.Medium
+                }
 
                 Rectangle {
-                    height: parent.height
-                    radius: 3
-                    color: "white"
-                    width: parent.width * trackProgress
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.left: tL.right
+                    anchors.right: tR.left
+                    anchors.leftMargin: 5
+                    anchors.rightMargin: 5
+                    height: 2.5
+                    radius: 1.5
+                    color: Qt.rgba(1, 1, 1, 0.12)
 
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: 500
-                            easing.type: Easing.OutCubic
+                    Rectangle {
+                        height: parent.height
+                        radius: parent.radius
+                        color: "white"
+                        width: parent.width * trackProgress
+                        Behavior on width {
+                            NumberAnimation {
+                                duration: 500
+                                easing.type: Easing.OutCubic
+                            }
                         }
                     }
                 }
+
+                Text {
+                    id: tR
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: timeTotal
+                    color: Qt.rgba(1, 1, 1, 0.4)
+                    font.pixelSize: 9
+                    font.family: textFontFamily
+                    font.weight: Font.Medium
+                }
             }
 
-            Text {
-                id: timeR
-                anchors.right: parent.right
-                text: timeTotal
-                color: "#8e8e93"
-                font.pixelSize: 12
-                font.family: textFontFamily
-                font.weight: Font.Medium
-            }
-        }
-
-        Item {
-            width: parent.width
-            height: 36
-
+            // Controls
             Row {
-                anchors.centerIn: parent
-                spacing: 50
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 24
+                height: 24
 
-                Item {
-                    width: 28
-                    height: 28
-                    scale: prevArea.pressed ? 0.8 : 1.0
-
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "\u23ee"
+                    color: prevTap.pressed ? "#666" : "white"
+                    font.pixelSize: 18
+                    font.family: textFontFamily
+                    scale: prevTap.pressed ? 0.8 : 1.0
                     Behavior on scale {
-                        NumberAnimation { duration: 100 }
-                    }
-
-                    Canvas {
-                        anchors.fill: parent
-                        property color fillColor: prevArea.pressed ? "#888" : "white"
-
-                        onFillColorChanged: requestPaint()
-                        onPaint: {
-                            var ctx = getContext("2d");
-                            ctx.clearRect(0, 0, width, height);
-                            ctx.fillStyle = fillColor;
-                            ctx.strokeStyle = fillColor;
-                            ctx.lineJoin = "round";
-                            ctx.lineWidth = 2;
-                            ctx.beginPath();
-                            ctx.rect(3, 5, 3, 18);
-                            ctx.moveTo(14, 5);
-                            ctx.lineTo(6, 14);
-                            ctx.lineTo(14, 23);
-                            ctx.closePath();
-                            ctx.moveTo(23, 5);
-                            ctx.lineTo(15, 14);
-                            ctx.lineTo(23, 23);
-                            ctx.closePath();
-                            ctx.fill();
-                            ctx.stroke();
+                        NumberAnimation {
+                            duration: 80
                         }
                     }
 
                     MouseArea {
-                        id: prevArea
+                        id: prevTap
                         anchors.fill: parent
-                        anchors.margins: -15
+                        anchors.margins: -8
                         preventStealing: true
-                        onPressed: (mouse) => {
+                        onPressed: m => {
                             controlPressed();
-                            mouse.accepted = true;
+                            m.accepted = true;
                         }
-                        onClicked: if (activePlayer) activePlayer.previous()
+                        onClicked: if (activePlayer)
+                            activePlayer.previous()
                     }
                 }
 
-                Item {
-                    width: 28
-                    height: 28
-                    scale: playArea.pressed ? 0.8 : 1.0
-
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: isPlaying ? "\u23f8" : "\u25b6"
+                    color: playTap.pressed ? "#666" : "white"
+                    font.pixelSize: isPlaying ? 16 : 18
+                    font.family: textFontFamily
+                    scale: playTap.pressed ? 0.8 : 1.0
                     Behavior on scale {
-                        NumberAnimation { duration: 100 }
-                    }
-
-                    Row {
-                        anchors.centerIn: parent
-                        spacing: 6
-                        visible: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
-
-                        Rectangle { width: 6; height: 20; radius: 2; color: playArea.pressed ? "#888" : "white" }
-                        Rectangle { width: 6; height: 20; radius: 2; color: playArea.pressed ? "#888" : "white" }
-                    }
-
-                    Canvas {
-                        anchors.fill: parent
-                        visible: !activePlayer || activePlayer.playbackState !== MprisPlaybackState.Playing
-                        property color fillColor: playArea.pressed ? "#888" : "white"
-
-                        onFillColorChanged: requestPaint()
-                        onPaint: {
-                            var ctx = getContext("2d");
-                            ctx.clearRect(0, 0, width, height);
-                            ctx.fillStyle = fillColor;
-                            ctx.strokeStyle = fillColor;
-                            ctx.lineJoin = "round";
-                            ctx.lineWidth = 2;
-                            ctx.beginPath();
-                            ctx.moveTo(8, 4);
-                            ctx.lineTo(24, 14);
-                            ctx.lineTo(8, 24);
-                            ctx.closePath();
-                            ctx.fill();
-                            ctx.stroke();
+                        NumberAnimation {
+                            duration: 80
                         }
                     }
 
                     MouseArea {
-                        id: playArea
+                        id: playTap
                         anchors.fill: parent
-                        anchors.margins: -15
+                        anchors.margins: -8
                         preventStealing: true
-                        onPressed: (mouse) => {
+                        onPressed: m => {
                             controlPressed();
-                            mouse.accepted = true;
+                            m.accepted = true;
                         }
                         onClicked: togglePlayback()
                     }
                 }
 
-                Item {
-                    width: 28
-                    height: 28
-                    scale: nextArea.pressed ? 0.8 : 1.0
-
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "\u23ed"
+                    color: nextTap.pressed ? "#666" : "white"
+                    font.pixelSize: 18
+                    font.family: textFontFamily
+                    scale: nextTap.pressed ? 0.8 : 1.0
                     Behavior on scale {
-                        NumberAnimation { duration: 100 }
-                    }
-
-                    Canvas {
-                        anchors.fill: parent
-                        property color fillColor: nextArea.pressed ? "#888" : "white"
-
-                        onFillColorChanged: requestPaint()
-                        onPaint: {
-                            var ctx = getContext("2d");
-                            ctx.clearRect(0, 0, width, height);
-                            ctx.fillStyle = fillColor;
-                            ctx.strokeStyle = fillColor;
-                            ctx.lineJoin = "round";
-                            ctx.lineWidth = 2;
-                            ctx.beginPath();
-                            ctx.moveTo(5, 5);
-                            ctx.lineTo(13, 14);
-                            ctx.lineTo(5, 23);
-                            ctx.closePath();
-                            ctx.moveTo(14, 5);
-                            ctx.lineTo(22, 14);
-                            ctx.lineTo(14, 23);
-                            ctx.closePath();
-                            ctx.rect(22, 5, 3, 18);
-                            ctx.fill();
-                            ctx.stroke();
+                        NumberAnimation {
+                            duration: 80
                         }
                     }
 
                     MouseArea {
-                        id: nextArea
+                        id: nextTap
                         anchors.fill: parent
-                        anchors.margins: -15
+                        anchors.margins: -8
                         preventStealing: true
-                        onPressed: (mouse) => {
+                        onPressed: m => {
                             controlPressed();
-                            mouse.accepted = true;
+                            m.accepted = true;
                         }
-                        onClicked: if (activePlayer) activePlayer.next()
+                        onClicked: if (activePlayer)
+                            activePlayer.next()
+                    }
+                }
+            }
+        }
+
+        // ── DIVIDER ──────────────────────────────────────────────────
+        Rectangle {
+            width: 1
+            height: parent.height * 0.6
+            anchors.verticalCenter: parent.verticalCenter
+            color: Qt.rgba(1, 1, 1, 0.08)
+        }
+
+        // ── RIGHT: Calendar ──────────────────────────────────────────
+        Column {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 5
+
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 0
+
+                Item {
+                    width: 36
+                    height: 36
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: _shortMonths[_todayMonth]
+                        color: "white"
+                        font.pixelSize: 14
+                        font.family: textFontFamily
+                        font.weight: Font.Bold
+                        font.letterSpacing: -0.3
+                    }
+                }
+
+                Repeater {
+                    model: buildWeekRow()
+                    delegate: Item {
+                        width: 26
+                        height: 36
+
+                        Text {
+                            anchors.top: parent.top
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: modelData.dayLabel
+                            color: modelData.isToday ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.25)
+                            font.pixelSize: modelData.isToday ? 8 : 9
+                            font.family: textFontFamily
+                            font.weight: Font.Medium
+                            font.letterSpacing: 0.2
+                        }
+
+                        Rectangle {
+                            anchors.bottom: parent.bottom
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: 22
+                            height: 22
+                            radius: 11
+                            color: modelData.isToday ? "#1c62f5" : "transparent"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData.dayNum
+                                color: modelData.isToday ? "white" : Qt.rgba(1, 1, 1, 0.65)
+                                font.pixelSize: 11
+                                font.family: textFontFamily
+                                font.weight: modelData.isToday ? Font.Bold : Font.Regular
+                            }
+                        }
                     }
                 }
             }

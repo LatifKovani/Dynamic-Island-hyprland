@@ -3,16 +3,19 @@ import QtQuick
 Item {
     id: root
 
-    signal buttonPressed()
-    signal clicked()
+    signal buttonPressed
+    signal clicked
 
     property string kind: "play"
     property string textFontFamily: ""
     readonly property bool down: controlArea.pressed
     readonly property string iconText: {
-        if (kind === "previous") return "⏮";
-        if (kind === "next") return "⏭";
-        if (kind === "pause") return "⏸";
+        if (kind === "previous")
+            return "⏮";
+        if (kind === "next")
+            return "⏭";
+        if (kind === "pause")
+            return "⏸";
         return "▶";
     }
 
@@ -45,7 +48,7 @@ Item {
         enabled: root.enabled
         preventStealing: true
 
-        onPressed: function(mouse) {
+        onPressed: function (mouse) {
             root.buttonPressed();
             mouse.accepted = true;
         }

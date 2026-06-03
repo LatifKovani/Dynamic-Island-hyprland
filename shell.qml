@@ -22,7 +22,7 @@ Scope {
     }
 
     function showNotificationAll(appName, summary, body) {
-        shellRoot.forEachWindow((window) => {
+        shellRoot.forEachWindow(window => {
             if (window && window.showNotification)
                 window.showNotification(appName, summary, body);
         });
@@ -40,19 +40,19 @@ Scope {
     }
 
     function prepareOverviewAll() {
-        shellRoot.forEachWindow((window) => window.prepareOverview());
+        shellRoot.forEachWindow(window => window.prepareOverview());
     }
 
     function cancelPreparedOverviewAll() {
-        shellRoot.forEachWindow((window) => window.cancelPreparedOverview());
+        shellRoot.forEachWindow(window => window.cancelPreparedOverview());
     }
 
     function openOverviewAll() {
-        shellRoot.forEachWindow((window) => window.openOverview());
+        shellRoot.forEachWindow(window => window.openOverview());
     }
 
     function closeOverviewAll() {
-        shellRoot.forEachWindow((window) => window.closeOverview());
+        shellRoot.forEachWindow(window => window.closeOverview());
     }
 
     function toggleOverviewAll() {
@@ -60,6 +60,56 @@ Scope {
             shellRoot.closeOverviewAll();
         else
             shellRoot.openOverviewAll();
+    }
+    IpcHandler {
+        target: "tide"
+
+        function togglePowerMenu() {
+            shellRoot.forEachWindow(window => {
+                if (!window || !window.islandContainerRef)
+                    return;
+                const ic = window.islandContainerRef;
+                if (ic.islandState === "power_menu")
+                    ic.smartRestoreState();
+                else
+                    ic.showPowerMenu();
+            });
+        }
+
+        function toggleControlCenter() {
+            shellRoot.forEachWindow(window => {
+                if (window && window.islandContainer)
+                    window.islandContainer.handleConfiguredClickAction("toggleControlCenter");
+            });
+        }
+
+        function showLyrics() {
+            shellRoot.forEachWindow(window => {
+                if (window && window.islandContainer)
+                    window.islandContainer.showLyricsCapsule();
+            });
+        }
+
+        function showCustom() {
+            shellRoot.forEachWindow(window => {
+                if (window && window.islandContainer)
+                    window.islandContainer.showCustomCapsule();
+            });
+        }
+
+        function showClock() {
+            shellRoot.forEachWindow(window => {
+                if (window && window.islandContainer)
+                    window.islandContainer.showTimeCapsule();
+            });
+        }
+
+        function togglePlayer() {
+            shellRoot.forEachWindow(window => {
+                if (window && window.islandContainer)
+                    window.islandContainer.handleConfiguredClickAction("toggleExpandedPlayer");
+            });
+        }
     }
 
     IpcHandler {
@@ -78,7 +128,7 @@ Scope {
         }
 
         function refreshWallpaperCache() {
-            shellRoot.forEachWindow((window) => {
+            shellRoot.forEachWindow(window => {
                 if (window && window.prewarmWallpaperCache)
                     window.prewarmWallpaperCache();
             });
