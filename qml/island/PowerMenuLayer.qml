@@ -81,12 +81,12 @@ Item {
                     },
                     {
                         label: "Logout",
-                        icon: "\udb80\udd68",
+                        icon: "\uf2f5 ",
                         process: logoutProcess
                     },
                     {
                         label: "Reboot",
-                        icon: "\udb80\udc15",
+                        icon: "\uf021",
                         process: rebootProcess
                     },
                     {

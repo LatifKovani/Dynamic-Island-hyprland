@@ -63,6 +63,17 @@ Scope {
     }
     IpcHandler {
         target: "tide"
+        function toggleAppLauncher() {
+            shellRoot.forEachWindow(window => {
+                if (!window || !window.islandContainerRef)
+                    return;
+                const ic = window.islandContainerRef;
+                if (ic.islandState === "app_launcher")
+                    ic.smartRestoreState();
+                else
+                    ic.showAppLauncher();
+            });
+        }
 
         function togglePowerMenu() {
             shellRoot.forEachWindow(window => {

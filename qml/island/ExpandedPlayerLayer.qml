@@ -1,6 +1,9 @@
 import QtQuick
 import IslandBackend
 import Quickshell.Services.Mpris
+// Requires qt6-5compat (Arch) / qml-module-qt5compat-graphicaleffects (Debian)
+// Alternative: swap OpacityMask for MultiEffect from QtQuick.Effects (Qt 6.5+)
+import Qt5Compat.GraphicalEffects
 
 Item {
     id: root
@@ -37,11 +40,13 @@ Item {
         for (let i = 0; i < 7; i++) {
             const d = new Date(_todayYear, _todayMonth, _todayDay - startOffset + i);
             const isToday = d.getDate() === _todayDay && d.getMonth() === _todayMonth;
+            const isPast = d < new Date(_todayYear, _todayMonth, _todayDay);
             const dow = d.getDay();
             days.push({
                 dayNum: d.getDate(),
                 dayLabel: isToday ? _fullDays[dow] : _fullDays[dow].charAt(0),
-                isToday: isToday
+                isToday: isToday,
+                isPast: isPast
             });
         }
         return days;
@@ -101,39 +106,62 @@ Item {
         anchors.fill: parent
         spacing: 10
 
-        // ── LEFT: Album art ──────────────────────────────────────────
-        Rectangle {
-            width: 118
-            height: 118
-            radius: 20
-            color: "#2c2c2e"
+        // ── LEFT: Album art with true rounded corners via OpacityMask ─
+        Item {
+            id: artWrapper
+            width: 96
+            height: 96
             anchors.verticalCenter: parent.verticalCenter
-            layer.enabled: true
-            layer.smooth: true
 
-            Image {
+            Rectangle {
+                id: artSource
                 anchors.fill: parent
-                source: currentArtUrl
-                fillMode: Image.PreserveAspectCrop
-                visible: source.toString() !== ""
-                sourceSize: Qt.size(236, 236)
+                color: "#2c2c2e"
+                visible: false
+                layer.enabled: true
+                layer.smooth: true
+
+                Image {
+                    anchors.fill: parent
+                    source: currentArtUrl
+                    fillMode: Image.PreserveAspectCrop
+                    visible: source.toString() !== ""
+                    sourceSize: Qt.size(192, 192)
+                    smooth: true
+                    mipmap: true
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    visible: currentArtUrl === ""
+                    text: "\uf001"
+                    font.family: iconFontFamily
+                    font.pixelSize: 24
+                    color: Qt.rgba(1, 1, 1, 0.2)
+                }
             }
 
-            Text {
-                anchors.centerIn: parent
-                visible: currentArtUrl === ""
-                text: "\uf001"
-                font.family: iconFontFamily
-                font.pixelSize: 28
-                color: Qt.rgba(1, 1, 1, 0.2)
+            Rectangle {
+                id: artMask
+                anchors.fill: parent
+                radius: 30
+                color: "white"
+                visible: false
+                layer.enabled: true
+            }
+
+            OpacityMask {
+                anchors.fill: parent
+                source: artSource
+                maskSource: artMask
             }
         }
 
         // ── CENTER: Track info + progress + controls ─────────────────
         Column {
-            width: 200
+            width: 210
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 9
+            spacing: 8
 
             // Track name + visualizer
             Row {
@@ -141,26 +169,25 @@ Item {
                 spacing: 6
 
                 Column {
-                    width: parent.width - vizRow.width - 6
+                    width: 150
                     spacing: 2
 
                     Text {
                         text: currentTrack
                         color: "white"
-                        font.pixelSize: 13
+                        font.pixelSize: 17
                         font.family: textFontFamily
                         font.weight: Font.SemiBold
                         font.letterSpacing: -0.3
                         width: parent.width
                         wrapMode: Text.WordWrap
                         maximumLineCount: 2
-                        elide: Text.ElideRight
                     }
 
                     Text {
                         text: currentArtist
                         color: Qt.rgba(1, 1, 1, 0.45)
-                        font.pixelSize: 11
+                        font.pixelSize: 13
                         font.family: textFontFamily
                         font.weight: Font.Regular
                         width: parent.width
@@ -198,10 +225,10 @@ Item {
                 }
             }
 
-            // Progress bar
+            // Progress bar — thicker track (4px instead of 2.5px)
             Item {
-                width: parent.width
-                height: 12
+                width: 160
+                height: 20
 
                 Text {
                     id: tL
@@ -209,7 +236,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: timePlayed
                     color: Qt.rgba(1, 1, 1, 0.4)
-                    font.pixelSize: 9
+                    font.pixelSize: 12
                     font.family: textFontFamily
                     font.weight: Font.Medium
                 }
@@ -220,8 +247,8 @@ Item {
                     anchors.right: tR.left
                     anchors.leftMargin: 5
                     anchors.rightMargin: 5
-                    height: 2.5
-                    radius: 1.5
+                    height: 4
+                    radius: 2
                     color: Qt.rgba(1, 1, 1, 0.12)
 
                     Rectangle {
@@ -244,109 +271,104 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: timeTotal
                     color: Qt.rgba(1, 1, 1, 0.4)
-                    font.pixelSize: 9
+                    font.pixelSize: 12
                     font.family: textFontFamily
                     font.weight: Font.Medium
                 }
             }
 
-            // Controls
-            Row {
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 24
-                height: 24
+            // Controls — centered under the 160px progress bar
+            Item {
+                width: 160
+                height: 28
 
-                Text {
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "\u23ee"
-                    color: prevTap.pressed ? "#666" : "white"
-                    font.pixelSize: 18
-                    font.family: textFontFamily
-                    scale: prevTap.pressed ? 0.8 : 1.0
-                    Behavior on scale {
-                        NumberAnimation {
-                            duration: 80
+                    spacing: 24
+                    height: 28
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "\u23ee"
+                        color: prevTap.pressed ? "#666" : "white"
+                        font.pixelSize: 30
+                        font.family: textFontFamily
+                        scale: prevTap.pressed ? 0.8 : 1.0
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 80
+                            }
+                        }
+                        MouseArea {
+                            id: prevTap
+                            anchors.fill: parent
+                            anchors.margins: -8
+                            preventStealing: true
+                            onPressed: m => {
+                                controlPressed();
+                                m.accepted = true;
+                            }
+                            onClicked: if (activePlayer)
+                                activePlayer.previous()
                         }
                     }
 
-                    MouseArea {
-                        id: prevTap
-                        anchors.fill: parent
-                        anchors.margins: -8
-                        preventStealing: true
-                        onPressed: m => {
-                            controlPressed();
-                            m.accepted = true;
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: isPlaying ? "\u23f8" : "\u25b6"
+                        color: playTap.pressed ? "#666" : "white"
+                        font.pixelSize: isPlaying ? 22 : 24
+                        font.family: textFontFamily
+                        scale: playTap.pressed ? 0.8 : 1.0
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 80
+                            }
                         }
-                        onClicked: if (activePlayer)
-                            activePlayer.previous()
-                    }
-                }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: isPlaying ? "\u23f8" : "\u25b6"
-                    color: playTap.pressed ? "#666" : "white"
-                    font.pixelSize: isPlaying ? 16 : 18
-                    font.family: textFontFamily
-                    scale: playTap.pressed ? 0.8 : 1.0
-                    Behavior on scale {
-                        NumberAnimation {
-                            duration: 80
+                        MouseArea {
+                            id: playTap
+                            anchors.fill: parent
+                            anchors.margins: -8
+                            preventStealing: true
+                            onPressed: m => {
+                                controlPressed();
+                                m.accepted = true;
+                            }
+                            onClicked: togglePlayback()
                         }
                     }
 
-                    MouseArea {
-                        id: playTap
-                        anchors.fill: parent
-                        anchors.margins: -8
-                        preventStealing: true
-                        onPressed: m => {
-                            controlPressed();
-                            m.accepted = true;
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "\u23ed"
+                        color: nextTap.pressed ? "#666" : "white"
+                        font.pixelSize: 30
+                        font.family: textFontFamily
+                        scale: nextTap.pressed ? 0.8 : 1.0
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 80
+                            }
                         }
-                        onClicked: togglePlayback()
-                    }
-                }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "\u23ed"
-                    color: nextTap.pressed ? "#666" : "white"
-                    font.pixelSize: 18
-                    font.family: textFontFamily
-                    scale: nextTap.pressed ? 0.8 : 1.0
-                    Behavior on scale {
-                        NumberAnimation {
-                            duration: 80
+                        MouseArea {
+                            id: nextTap
+                            anchors.fill: parent
+                            anchors.margins: -8
+                            preventStealing: true
+                            onPressed: m => {
+                                controlPressed();
+                                m.accepted = true;
+                            }
+                            onClicked: if (activePlayer)
+                                activePlayer.next()
                         }
-                    }
-
-                    MouseArea {
-                        id: nextTap
-                        anchors.fill: parent
-                        anchors.margins: -8
-                        preventStealing: true
-                        onPressed: m => {
-                            controlPressed();
-                            m.accepted = true;
-                        }
-                        onClicked: if (activePlayer)
-                            activePlayer.next()
                     }
                 }
             }
         }
 
-        // ── DIVIDER ──────────────────────────────────────────────────
-        Rectangle {
-            width: 1
-            height: parent.height * 0.6
-            anchors.verticalCenter: parent.verticalCenter
-            color: Qt.rgba(1, 1, 1, 0.08)
-        }
-
-        // ── RIGHT: Calendar ──────────────────────────────────────────
+        // ── RIGHT: Calendar (divider removed) ───────────────────────
         Column {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 5
@@ -356,14 +378,14 @@ Item {
                 spacing: 0
 
                 Item {
-                    width: 36
+                    width: 65
                     height: 36
 
                     Text {
                         anchors.centerIn: parent
                         text: _shortMonths[_todayMonth]
                         color: "white"
-                        font.pixelSize: 14
+                        font.pixelSize: 23
                         font.family: textFontFamily
                         font.weight: Font.Bold
                         font.letterSpacing: -0.3
@@ -380,26 +402,24 @@ Item {
                             anchors.top: parent.top
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: modelData.dayLabel
-                            color: modelData.isToday ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.25)
-                            font.pixelSize: modelData.isToday ? 8 : 9
+                            color: modelData.isToday ? Qt.rgba(1, 1, 1, 0.55) : modelData.isPast ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.35)
+                            font.pixelSize: modelData.isToday ? 10 : 11
                             font.family: textFontFamily
                             font.weight: Font.Medium
                             font.letterSpacing: 0.2
                         }
 
-                        Rectangle {
+                        Item {
                             anchors.bottom: parent.bottom
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: 22
                             height: 22
-                            radius: 11
-                            color: modelData.isToday ? "#1c62f5" : "transparent"
 
                             Text {
                                 anchors.centerIn: parent
                                 text: modelData.dayNum
-                                color: modelData.isToday ? "white" : Qt.rgba(1, 1, 1, 0.65)
-                                font.pixelSize: 11
+                                color: modelData.isToday ? "#1c62f5" : modelData.isPast ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(1, 1, 1, 0.75)
+                                font.pixelSize: 13
                                 font.family: textFontFamily
                                 font.weight: modelData.isToday ? Font.Bold : Font.Regular
                             }

@@ -193,9 +193,9 @@ Item {
                             width: parent.width - root.batteryTipWidth - 1
                             height: parent.height
                             radius: root.batteryOuterRadius
-                            color: Qt.rgba(1, 1, 1, 0.38)
+                            color: Qt.rgba(209, 209, 209, 0.60)
                             border.color: Qt.rgba(1, 1, 1, 0.55)
-                            border.width: 1.2
+                            border.width: 1.1
 
                             // Fill
                             Rectangle {
