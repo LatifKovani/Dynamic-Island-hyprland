@@ -43,8 +43,6 @@ PanelWindow {
         right: true
     }
     mask: Region {
-        // Input is the union of the island's visible surfaces plus a compact top
-        // gesture strip. The gesture strip must not grow with expanded content.
         Region {
             x: 0
             y: 0
@@ -60,7 +58,6 @@ PanelWindow {
             height: Math.ceil(mainCapsule.height)
         }
 
-        // Add existing detail shells
         Region {
             intersection: Intersection.Combine
             x: Math.floor(wifiConnectivityDetailShell.x)
@@ -80,9 +77,16 @@ PanelWindow {
     implicitHeight: root.overviewVisible ? Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(4 + root.overviewCapsuleHeight + 8), Math.ceil(root.controlCenterWindowHeight)) : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight))
     exclusiveZone: 45
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen || islandContainer.appLauncherLayerVisible))
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || islandContainer.appLauncherLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen))
+
+    // ── FIX 1: appLauncherLayerVisible is now inside the condition (left of ?)
+    // so WlrKeyboardFocus.OnDemand is correctly set when the launcher is open.
+    // Previously it was in the ELSE branch: "... : WlrKeyboardFocus.None || appLauncherLayerVisible"
+    // which never yielded OnDemand on the focused monitor, so the compositor
+    // never routed keyboard events to this window.
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None || islandContainer.appLauncherLayerVisible
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || islandContainer.appLauncherLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
     readonly property string iconFontFamily: userConfig.iconFontFamily
     readonly property string textFontFamily: userConfig.textFontFamily
     readonly property string heroFontFamily: userConfig.heroFontFamily
@@ -338,7 +342,6 @@ PanelWindow {
         id: timeObj
     }
 
-    // Measures OSD custom text so the pill auto-sizes to fit any message
     TextMetrics {
         id: osdTextMetrics
         font.family: root.textFontFamily
@@ -347,7 +350,6 @@ PanelWindow {
         text: islandContainer.osdCustomText
     }
 
-    // --- 灵动岛主容器与全局状态 ---
     FocusScope {
         id: islandContainer
         anchors.fill: parent
@@ -1034,7 +1036,6 @@ PanelWindow {
             }
         }
 
-        // --- UI 渲染：灵动岛主干 ---
         Rectangle {
             id: mainCapsule
             z: 5
@@ -1560,7 +1561,7 @@ PanelWindow {
                     BluetoothExpandedLayer {
                         device: islandContainer.bluetoothExpandedDevice
                         volumeLevel: islandContainer.currentVolume
-                        iconText: ""
+                        iconText: ""
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         showCondition: islandContainer.bluetoothExpandedLayerVisible

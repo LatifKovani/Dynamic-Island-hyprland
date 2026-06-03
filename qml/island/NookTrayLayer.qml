@@ -7,7 +7,6 @@ Item {
 
     property bool showCondition: false
 
-    // ── Props forwarded to ExpandedPlayerLayer (Nook) ────────────
     property string currentArtUrl: ""
     property string currentTrack: ""
     property string currentArtist: ""
@@ -18,7 +17,6 @@ Item {
     property string iconFontFamily: ""
     property string textFontFamily: ""
 
-    // ── Tab state (persists while the capsule stays open) ─────────
     property string activeTab: "nook"
 
     anchors.fill: parent
@@ -42,7 +40,6 @@ Item {
         anchors.rightMargin: 14
         height: 22
 
-        // Nook tab
         Rectangle {
             id: nookTab
             height: 22
@@ -91,9 +88,8 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 preventStealing: true
-                onPressed: m => {
+                onPressed: {
                     root.controlPressed();
-                    m.accepted = true;
                 }
                 onClicked: root.activeTab = "nook"
             }
@@ -104,7 +100,6 @@ Item {
             height: 1
         }
 
-        // Tray tab
         Rectangle {
             id: trayTab
             height: 22
@@ -153,21 +148,18 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 preventStealing: true
-                onPressed: m => {
+                onPressed: {
                     root.controlPressed();
-                    m.accepted = true;
                 }
                 onClicked: root.activeTab = "tray"
             }
         }
 
-        // Flexible spacer pushes gear to the right
         Item {
             width: tabBar.width - nookTab.width - 6 - trayTab.width - gearIcon.contentWidth - 28 - 14 - 14
             height: 1
         }
 
-        // Settings gear ─ placeholder for future control-center shortcut
         Text {
             id: gearIcon
             anchors.verticalCenter: parent.verticalCenter
@@ -186,15 +178,13 @@ Item {
                 anchors.fill: parent
                 anchors.margins: -8
                 preventStealing: true
-                onPressed: m => {
+                onPressed: {
                     root.controlPressed();
-                    m.accepted = true;
                 }
             }
         }
     }
 
-    // thin separator under the tab bar
     Rectangle {
         anchors.top: tabBar.bottom
         anchors.left: parent.left
@@ -206,7 +196,7 @@ Item {
         color: Qt.rgba(1, 1, 1, 0.06)
     }
 
-    // ── Content area (both layers overlap; opacity controls which shows) ─
+    // ── Content area ──────────────────────────────────────────────
     Item {
         anchors.top: tabBar.bottom
         anchors.left: parent.left
@@ -214,9 +204,17 @@ Item {
         anchors.bottom: parent.bottom
         anchors.topMargin: 5
 
-        // ── NOOK: media player + calendar ────────────────────────
+        // ── NOOK: media player ─────────────────────────────────────
+        // enabled: false when the tray tab is active.
+        // Both layers use anchors.fill so they fully overlap.
+        // TrayLayer is declared second (higher z-order) and was
+        // intercepting ALL mouse events — including the ListView/Flickable
+        // grabbing presses to detect flick gestures — even at opacity 0.
+        // Setting enabled: activeTab === "nook/tray" stops whichever layer
+        // is invisible from consuming input meant for the other.
         ExpandedPlayerLayer {
             anchors.fill: parent
+            enabled: root.activeTab === "nook"
             showCondition: root.activeTab === "nook" && root.showCondition
             currentArtUrl: root.currentArtUrl
             currentTrack: root.currentTrack
@@ -230,9 +228,10 @@ Item {
             onControlPressed: root.controlPressed()
         }
 
-        // ── TRAY: todo list + pomodoro ────────────────────────────
+        // ── TRAY: todo list + pomodoro ─────────────────────────────
         TrayLayer {
             anchors.fill: parent
+            enabled: root.activeTab === "tray"
             showCondition: root.activeTab === "tray" && root.showCondition
             iconFontFamily: root.iconFontFamily
             textFontFamily: root.textFontFamily

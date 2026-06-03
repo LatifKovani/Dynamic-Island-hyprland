@@ -1,8 +1,6 @@
 import QtQuick
 import IslandBackend
 import Quickshell.Services.Mpris
-// Requires qt6-5compat (Arch) / qml-module-qt5compat-graphicaleffects (Debian)
-// Alternative: swap OpacityMask for MultiEffect from QtQuick.Effects (Qt 6.5+)
 import Qt5Compat.GraphicalEffects
 
 Item {
@@ -106,7 +104,7 @@ Item {
         anchors.fill: parent
         spacing: 10
 
-        // ── LEFT: Album art with true rounded corners via OpacityMask ─
+        // ── LEFT: Album art ──────────────────────────────────────────
         Item {
             id: artWrapper
             width: 96
@@ -225,7 +223,7 @@ Item {
                 }
             }
 
-            // Progress bar — thicker track (4px instead of 2.5px)
+            // Progress bar
             Item {
                 width: 160
                 height: 20
@@ -277,7 +275,11 @@ Item {
                 }
             }
 
-            // Controls — centered under the 160px progress bar
+            // Controls
+            // Fix 4: removed "m.accepted = true" from onPressed so that
+            // onClicked fires normally. controlPressed() still runs on press
+            // (to suppress the capsule-level click) but the event is NOT
+            // consumed, which is what was silently blocking the click action.
             Item {
                 width: 160
                 height: 28
@@ -288,87 +290,88 @@ Item {
                     spacing: 24
                     height: 28
 
+                    // Previous
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "\u23ee"
-                        color: prevTap.pressed ? "#666" : "white"
+                        color: prevTap.pressed ? "#888" : "white"
                         font.pixelSize: 30
                         font.family: textFontFamily
-                        scale: prevTap.pressed ? 0.8 : 1.0
+                        scale: prevTap.pressed ? 0.85 : 1.0
                         Behavior on scale {
                             NumberAnimation {
                                 duration: 80
                             }
                         }
+
                         MouseArea {
                             id: prevTap
                             anchors.fill: parent
                             anchors.margins: -8
                             preventStealing: true
-                            onPressed: m => {
-                                controlPressed();
-                                m.accepted = true;
+                            onPressed: root.controlPressed()   // Fix 4: no m.accepted
+                            onClicked: {
+                                if (activePlayer)
+                                    activePlayer.previous();
                             }
-                            onClicked: if (activePlayer)
-                                activePlayer.previous()
                         }
                     }
 
+                    // Play / Pause
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: isPlaying ? "\u23f8" : "\u25b6"
-                        color: playTap.pressed ? "#666" : "white"
+                        color: playTap.pressed ? "#888" : "white"
                         font.pixelSize: isPlaying ? 22 : 24
                         font.family: textFontFamily
-                        scale: playTap.pressed ? 0.8 : 1.0
+                        scale: playTap.pressed ? 0.85 : 1.0
                         Behavior on scale {
                             NumberAnimation {
                                 duration: 80
                             }
                         }
+
                         MouseArea {
                             id: playTap
                             anchors.fill: parent
                             anchors.margins: -8
                             preventStealing: true
-                            onPressed: m => {
-                                controlPressed();
-                                m.accepted = true;
-                            }
+                            onPressed: root.controlPressed()   // Fix 4: no m.accepted
                             onClicked: togglePlayback()
                         }
                     }
 
+                    // Next
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "\u23ed"
-                        color: nextTap.pressed ? "#666" : "white"
+                        color: nextTap.pressed ? "#888" : "white"
                         font.pixelSize: 30
                         font.family: textFontFamily
-                        scale: nextTap.pressed ? 0.8 : 1.0
+                        scale: nextTap.pressed ? 0.85 : 1.0
                         Behavior on scale {
                             NumberAnimation {
                                 duration: 80
                             }
                         }
+
                         MouseArea {
                             id: nextTap
                             anchors.fill: parent
                             anchors.margins: -8
                             preventStealing: true
-                            onPressed: m => {
-                                controlPressed();
-                                m.accepted = true;
+                            onPressed: root.controlPressed()   // Fix 4: no m.accepted
+                            onClicked: {
+                                if (activePlayer)
+                                    activePlayer.next();
                             }
-                            onClicked: if (activePlayer)
-                                activePlayer.next()
                         }
                     }
                 }
             }
         }
 
-        // ── RIGHT: Calendar (divider removed) ───────────────────────
+        // ── RIGHT: Calendar ──────────────────────────────────────────
         Column {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 5

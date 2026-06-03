@@ -11,6 +11,9 @@ Item {
     property string textFontFamily: ""
     property bool appsLoaded: false
 
+    // Currently keyboard-highlighted row index (-1 = none)
+    property int highlightedIndex: -1
+
     anchors.fill: parent
     opacity: showCondition ? 1 : 0
 
@@ -25,16 +28,28 @@ Item {
         if (showCondition) {
             searchInput.text = "";
             filterApps("");
+            highlightedIndex = -1;
             if (!appsLoaded)
                 scanProcess.running = true;
+            // Fix 1: use forceActiveFocus on the Item, not just the TextInput,
+            // so the FocusScope chain is satisfied before we drill into the input.
             focusTimer.restart();
         }
     }
 
-    // Delay focus slightly so the capsule animation doesn't swallow the event
+    // Fix 1: two-step focus — first grab the Item's focus scope, then the input.
     Timer {
         id: focusTimer
-        interval: 80
+        interval: 60
+        repeat: false
+        onTriggered: {
+            root.forceActiveFocus();
+            searchInputFocusTimer.restart();
+        }
+    }
+    Timer {
+        id: searchInputFocusTimer
+        interval: 30
         repeat: false
         onTriggered: searchInput.forceActiveFocus()
     }
@@ -48,6 +63,7 @@ Item {
 
     function filterApps(query) {
         shownApps.clear();
+        highlightedIndex = -1;
         const q = query.toLowerCase().trim();
         let count = 0;
         for (let i = 0; i < allApps.count && count < 12; i++) {
@@ -55,24 +71,40 @@ Item {
             if (!q || a.appName.toLowerCase().includes(q)) {
                 shownApps.append({
                     appName: a.appName,
-                    appExec: a.appExec
+                    appExec: a.appExec,
+                    appIcon: a.appIcon
                 });
                 count++;
             }
         }
     }
 
-    // ── Scan .desktop files via Python ────────────────────────────
+    // Fix 2: clamp highlight index within current list
+    function moveHighlight(delta) {
+        if (shownApps.count === 0)
+            return;
+        let next = highlightedIndex + delta;
+        if (next < 0)
+            next = shownApps.count - 1;
+        if (next >= shownApps.count)
+            next = 0;
+        highlightedIndex = next;
+        resultsList.positionViewAtIndex(next, ListView.Contain);
+    }
+
+    // ── Scan .desktop files via Python — now also reads Icon= field ──────
     Process {
         id: scanProcess
-        command: ["python3", "-c", "import glob,os,configparser\n" + "apps=[]\n" + "paths=glob.glob('/usr/share/applications/*.desktop')\n" + "paths+=glob.glob(os.path.expanduser('~/.local/share/applications/*.desktop'))\n" + "for f in paths:\n" + "    c=configparser.ConfigParser(strict=False,interpolation=None)\n" + "    try:\n" + "        c.read(f)\n" + "        if 'Desktop Entry' not in c: continue\n" + "        e=c['Desktop Entry']\n" + "        if e.get('Type')!='Application': continue\n" + "        if e.get('NoDisplay','false').lower()=='true': continue\n" + "        n=e.get('Name','')\n" + "        x=e.get('Exec','').split('%')[0].strip()\n" + "        if n and x: apps.append((n,x))\n" + "    except: pass\n" + "for n,x in sorted(apps,key=lambda a:a[0].lower()): print(n+'\\t'+x)\n"]
+        // Fix 3: extended Python that resolves icon names → absolute paths
+        command: ["python3", "-c", "import glob,os,configparser\n" + "def find_icon(name):\n" + "    if not name: return ''\n" + "    if os.path.isabs(name) and os.path.isfile(name): return name\n" + "    themes=['hicolor','Papirus','Adwaita','breeze','gnome']\n" + "    sizes=['48x48','32x32','64x64','scalable','22x22','24x24']\n" + "    exts=['.png','.svg','.xpm']\n" + "    bases=['/usr/share/icons',os.path.expanduser('~/.local/share/icons'),'/usr/local/share/icons']\n" + "    for b in bases:\n" + "        for t in themes:\n" + "            for s in sizes:\n" + "                for e in exts:\n" + "                    p=os.path.join(b,t,s,'apps',name+e)\n" + "                    if os.path.isfile(p): return p\n" + "    for b in ['/usr/share/pixmaps','/usr/local/share/pixmaps']:\n" + "        for e in exts:\n" + "            p=os.path.join(b,name+e)\n" + "            if os.path.isfile(p): return p\n" + "    return ''\n" + "apps=[]\n" + "paths=glob.glob('/usr/share/applications/*.desktop')\n" + "paths+=glob.glob(os.path.expanduser('~/.local/share/applications/*.desktop'))\n" + "for f in paths:\n" + "    c=configparser.ConfigParser(strict=False,interpolation=None)\n" + "    try:\n" + "        c.read(f)\n" + "        if 'Desktop Entry' not in c: continue\n" + "        e=c['Desktop Entry']\n" + "        if e.get('Type')!='Application': continue\n" + "        if e.get('NoDisplay','false').lower()=='true': continue\n" + "        n=e.get('Name','')\n" + "        x=e.get('Exec','').split('%')[0].strip()\n" + "        i=e.get('Icon','')\n" + "        if n and x: apps.append((n,x,find_icon(i)))\n" + "    except: pass\n" + "for n,x,i in sorted(apps,key=lambda a:a[0].lower()): print(n+'\\t'+x+'\\t'+i)\n"]
         stdout: SplitParser {
             onRead: data => {
-                const tab = data.indexOf('\t');
-                if (tab > 0) {
+                const parts = data.split('\t');
+                if (parts.length >= 2) {
                     allApps.append({
-                        appName: data.substring(0, tab),
-                        appExec: data.substring(tab + 1).trim()
+                        appName: parts[0],
+                        appExec: parts[1].trim(),
+                        appIcon: parts.length >= 3 ? parts[2].trim() : ""
                     });
                 }
             }
@@ -95,6 +127,36 @@ Item {
         launcher.execCmd = execCmd.trim();
         launcher.running = true;
         root.closeRequested();
+    }
+
+    // ── Key handler at Item level so it works regardless of which
+    //    child has focus (Fix 2 lives here too) ────────────────────
+    Keys.onPressed: event => {
+        switch (event.key) {
+        case Qt.Key_Down:
+        case Qt.Key_Tab:
+            moveHighlight(1);
+            event.accepted = true;
+            break;
+        case Qt.Key_Up:
+        case Qt.Key_Backtab:
+            moveHighlight(-1);
+            event.accepted = true;
+            break;
+        case Qt.Key_Return:
+        case Qt.Key_Enter:
+            if (highlightedIndex >= 0 && highlightedIndex < shownApps.count) {
+                root.launch(shownApps.get(highlightedIndex).appExec);
+            } else if (shownApps.count > 0) {
+                root.launch(shownApps.get(0).appExec);
+            }
+            event.accepted = true;
+            break;
+        case Qt.Key_Escape:
+            root.closeRequested();
+            event.accepted = true;
+            break;
+        }
     }
 
     // ── UI ────────────────────────────────────────────────────────
@@ -172,11 +234,8 @@ Item {
 
                     onTextChanged: root.filterApps(text)
 
-                    Keys.onReturnPressed: {
-                        if (shownApps.count > 0)
-                            root.launch(shownApps.get(0).appExec);
-                    }
-                    Keys.onEscapePressed: root.closeRequested()
+                    // Return/Escape are handled by the parent Item's Keys.onPressed
+                    // (they bubble up because TextInput only consumes keys it acts on)
                 }
             }
 
@@ -213,7 +272,6 @@ Item {
             width: parent.width
             height: parent.height - 34 - 8
 
-            // Empty / loading state
             Text {
                 anchors.centerIn: parent
                 visible: !root.appsLoaded || shownApps.count === 0
@@ -224,31 +282,70 @@ Item {
             }
 
             ListView {
+                id: resultsList
                 anchors.fill: parent
                 model: shownApps
                 spacing: 2
                 clip: true
+                // Fix 2: allow keyboard scroll without mouse grab
+                keyNavigationEnabled: false
 
                 delegate: Rectangle {
                     width: ListView.view.width
                     height: 36
                     radius: 10
-                    color: rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : rowMouse.pressed ? Qt.rgba(1, 1, 1, 0.15) : "transparent"
+                    // Fix 2: highlighted row gets a distinct tint
+                    color: (index === root.highlightedIndex) ? Qt.rgba(1, 1, 1, 0.18) : rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
                     Behavior on color {
                         ColorAnimation {
                             duration: 80
                         }
                     }
 
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        text: model.appName
-                        color: "white"
-                        font.pixelSize: 13
-                        font.family: root.textFontFamily
-                        font.weight: Font.Medium
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        spacing: 8
+
+                        // Fix 3: app icon (shown when resolved path is non-empty)
+                        Item {
+                            width: 22
+                            height: parent.height
+
+                            Image {
+                                anchors.centerIn: parent
+                                width: 20
+                                height: 20
+                                source: model.appIcon !== "" ? ("file://" + model.appIcon) : ""
+                                visible: model.appIcon !== "" && status === Image.Ready
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
+                                mipmap: true
+                                sourceSize: Qt.size(40, 40)
+                            }
+
+                            // Fallback generic icon when no image resolved
+                            Text {
+                                anchors.centerIn: parent
+                                visible: model.appIcon === "" || parent.children[0].status !== Image.Ready
+                                text: "\uf11b"   // fa-gamepad as neutral fallback
+                                font.family: root.iconFontFamily
+                                font.pixelSize: 13
+                                color: Qt.rgba(1, 1, 1, 0.30)
+                            }
+                        }
+
+                        Text {
+                            width: parent.width - 22 - 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: model.appName
+                            color: "white"
+                            font.pixelSize: 13
+                            font.family: root.textFontFamily
+                            font.weight: Font.Medium
+                            elide: Text.ElideRight
+                        }
                     }
 
                     MouseArea {
@@ -256,6 +353,11 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         onClicked: root.launch(model.appExec)
+                        // Fix 2: hovering a row with the mouse syncs the highlight
+                        onContainsMouseChanged: {
+                            if (containsMouse)
+                                root.highlightedIndex = index;
+                        }
                     }
                 }
             }
