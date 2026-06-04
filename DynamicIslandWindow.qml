@@ -1546,6 +1546,7 @@ PanelWindow {
                         textFontFamily: root.textFontFamily
                         showCondition: islandContainer.expandedLayerVisible
                         onControlPressed: islandContainer.suppressCapsuleClick()
+                        onSettingsPressed: islandContainer.showControlCenter()
                     }
                 }
             }

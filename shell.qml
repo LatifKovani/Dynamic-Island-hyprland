@@ -94,36 +94,36 @@ Scope {
 
         function toggleControlCenter() {
             shellRoot.forEachWindow(window => {
-                if (window && window.islandContainer)
-                    window.islandContainer.handleConfiguredClickAction("toggleControlCenter");
+                if (window && window.islandContainerRef)
+                    window.islandContainerRef.handleConfiguredClickAction("toggleControlCenter");
             });
         }
 
         function showLyrics() {
             shellRoot.forEachWindow(window => {
-                if (window && window.islandContainer)
-                    window.islandContainer.showLyricsCapsule();
+                if (window && window.islandContainerRef)
+                    window.islandContainerRef.showLyricsCapsule();
             });
         }
 
         function showCustom() {
             shellRoot.forEachWindow(window => {
-                if (window && window.islandContainer)
-                    window.islandContainer.showCustomCapsule();
+                if (window && window.islandContainerRef)
+                    window.islandContainerRef.showCustomCapsule();
             });
         }
 
         function showClock() {
             shellRoot.forEachWindow(window => {
-                if (window && window.islandContainer)
-                    window.islandContainer.showTimeCapsule();
+                if (window && window.islandContainerRef)
+                    window.islandContainerRef.showTimeCapsule();
             });
         }
 
         function togglePlayer() {
             shellRoot.forEachWindow(window => {
-                if (window && window.islandContainer)
-                    window.islandContainer.handleConfiguredClickAction("toggleExpandedPlayer");
+                if (window && window.islandContainerRef)
+                    window.islandContainerRef.handleConfiguredClickAction("toggleExpandedPlayer");
             });
         }
     }

@@ -4,6 +4,7 @@ Item {
     id: root
 
     signal controlPressed
+    signal settingsPressed
 
     property bool showCondition: false
 
@@ -180,6 +181,9 @@ Item {
                 preventStealing: true
                 onPressed: {
                     root.controlPressed();
+                }
+                onClicked: {
+                    root.settingsPressed();
                 }
             }
         }

@@ -135,6 +135,7 @@ Item {
                     sourceSize: Qt.size(192, 192)
                     smooth: true
                     mipmap: true
+                    cache: false
                 }
                 Text {
                     anchors.centerIn: parent
@@ -488,14 +489,27 @@ Item {
                             anchors.bottom: parent.bottom
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: 22
-                            height: 22
+                            height: 28
+
                             Text {
-                                anchors.centerIn: parent
+                                anchors.top: parent.top
+                                anchors.topMargin: 2
+                                anchors.horizontalCenter: parent.horizontalCenter
                                 text: modelData.dayNum
                                 color: modelData.isToday ? "#1c62f5" : modelData.isPast ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(1, 1, 1, 0.75)
                                 font.pixelSize: 13
                                 font.family: textFontFamily
                                 font.weight: modelData.isToday ? Font.Bold : Font.Regular
+                            }
+
+                            Rectangle {
+                                visible: modelData.isToday
+                                width: 4
+                                height: 4
+                                radius: 2
+                                color: "#1c62f5"
+                                anchors.bottom: parent.bottom
+                                anchors.horizontalCenter: parent.horizontalCenter
                             }
                         }
                     }
