@@ -59,7 +59,7 @@ Item {
         return [0.34, 0.58, 0.82, 0.58, 0.34][index] || 0.4;
     }
 
-    // Format microseconds → "m:ss"  (MPRIS2 uses µs natively)
+    // Microseconds → "m:ss"  (MPRIS2 native unit)
     function formatUs(us) {
         const s = Math.max(0, Math.floor(us / 1000000));
         return Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
@@ -114,6 +114,11 @@ Item {
             height: 96
             anchors.verticalCenter: parent.verticalCenter
 
+            // artSource and artMask are rendered off-screen via their layers
+            // and composited by OpacityMask below.
+            // IMPORTANT: do NOT add layer.effect to any item in this same
+            // component using Qt5Compat.GraphicalEffects — it corrupts the
+            // shared ShaderEffect pipeline and breaks OpacityMask.
             Rectangle {
                 id: artSource
                 anchors.fill: parent
@@ -140,6 +145,7 @@ Item {
                     color: Qt.rgba(1, 1, 1, 0.2)
                 }
             }
+
             Rectangle {
                 id: artMask
                 anchors.fill: parent
@@ -148,6 +154,7 @@ Item {
                 visible: false
                 layer.enabled: true
             }
+
             OpacityMask {
                 anchors.fill: parent
                 source: artSource
@@ -226,15 +233,52 @@ Item {
                 height: 20
 
                 property bool isDragging: false
+                property bool isHovered: false      // driven by seekMouseArea below
                 property real dragProgress: 0
-                // During scrub show drag position, otherwise real playback position
                 readonly property real displayProgress: isDragging ? dragProgress : trackProgress
 
+                // ── seekMouseArea declared FIRST so progressTrack and seekKnob
+                //    can reference its properties without forward-reference errors.
+                MouseArea {
+                    id: seekMouseArea
+                    anchors.fill: parent
+                    z: -1           // visual elements (track, knob, labels) render on top
+                    hoverEnabled: true
+                    preventStealing: true
+                    cursorShape: Qt.PointingHandCursor
+
+                    onContainsMouseChanged: progressBarItem.isHovered = containsMouse
+
+                    function fraction(mx) {
+                        return Math.max(0, Math.min(1, (mx - progressTrack.x) / progressTrack.width));
+                    }
+
+                    onPressed: m => {
+                        progressBarItem.isDragging = true;
+                        progressBarItem.dragProgress = fraction(m.x);
+                        root.controlPressed();
+                    }
+                    onPositionChanged: m => {
+                        if (pressed)
+                            progressBarItem.dragProgress = fraction(m.x);
+                    }
+                    onReleased: m => {
+                        if (activePlayer && activePlayer.canSeek && activePlayer.length > 0) {
+                            const targetUs = Math.round(progressBarItem.dragProgress * activePlayer.length);
+                            activePlayer.seek(targetUs - activePlayer.position);
+                        }
+                        progressBarItem.isDragging = false;
+                    }
+                    onCanceled: {
+                        progressBarItem.isDragging = false;
+                    }
+                }
+
+                // ── Left time label ──────────────────────────────────
                 Text {
                     id: tL
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    // Show drag-target time while scrubbing
                     text: progressBarItem.isDragging ? root.formatUs(progressBarItem.dragProgress * (activePlayer ? activePlayer.length : 0)) : timePlayed
                     color: Qt.rgba(1, 1, 1, progressBarItem.isDragging ? 0.75 : 0.4)
                     font.pixelSize: 12
@@ -247,15 +291,16 @@ Item {
                     }
                 }
 
+                // ── Track ────────────────────────────────────────────
                 Rectangle {
                     id: progressTrack
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.left: tL.right
-                    anchors.right: tR.left
                     anchors.leftMargin: 5
+                    anchors.right: tR.left
                     anchors.rightMargin: 5
-                    // Grows slightly on hover or while dragging
-                    height: seekMouseArea.containsMouse || progressBarItem.isDragging ? 6 : 4
+                    // isHovered is set by seekMouseArea (declared above — safe backward ref)
+                    height: progressBarItem.isHovered || progressBarItem.isDragging ? 6 : 4
                     radius: height / 2
                     color: Qt.rgba(1, 1, 1, 0.12)
                     Behavior on height {
@@ -265,13 +310,12 @@ Item {
                         }
                     }
 
-                    // Filled portion
+                    // Fill
                     Rectangle {
                         height: parent.height
                         radius: parent.radius
                         color: "white"
                         width: parent.width * progressBarItem.displayProgress
-                        // Disable smooth animation while dragging for instant response
                         Behavior on width {
                             enabled: !progressBarItem.isDragging
                             NumberAnimation {
@@ -281,7 +325,9 @@ Item {
                         }
                     }
 
-                    // Seek knob — appears on hover and while dragging
+                    // Knob — appears on hover/drag.
+                    // No layer.effect here: adding Qt5Compat GraphicalEffects effects
+                    // as layer.effect breaks the OpacityMask used for album art.
                     Rectangle {
                         id: seekKnob
                         width: 10
@@ -289,8 +335,7 @@ Item {
                         radius: 5
                         color: "white"
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: seekMouseArea.containsMouse || progressBarItem.isDragging
-                        // Clamped so the knob never overflows the track ends
+                        visible: progressBarItem.isHovered || progressBarItem.isDragging
                         x: Math.max(0, Math.min(parent.width - width, parent.width * progressBarItem.displayProgress - width / 2))
                         Behavior on x {
                             enabled: !progressBarItem.isDragging
@@ -299,17 +344,10 @@ Item {
                                 easing.type: Easing.OutCubic
                             }
                         }
-                        layer.enabled: true
-                        layer.effect: DropShadow {
-                            radius: 4
-                            samples: 9
-                            color: Qt.rgba(0, 0, 0, 0.45)
-                            horizontalOffset: 0
-                            verticalOffset: 1
-                        }
                     }
                 }
 
+                // ── Right time label ─────────────────────────────────
                 Text {
                     id: tR
                     anchors.right: parent.right
@@ -319,45 +357,6 @@ Item {
                     font.pixelSize: 12
                     font.family: textFontFamily
                     font.weight: Font.Medium
-                }
-
-                // Transparent overlay covering the full 160×20 item so the user
-                // doesn't have to click precisely on the thin 4px track line.
-                MouseArea {
-                    id: seekMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    preventStealing: true
-                    cursorShape: Qt.PointingHandCursor
-
-                    // Convert mouse-X (progressBarItem coords) to a [0,1] fraction
-                    function fraction(mx) {
-                        return Math.max(0, Math.min(1, (mx - progressTrack.x) / progressTrack.width));
-                    }
-
-                    onPressed: m => {
-                        progressBarItem.isDragging = true;
-                        progressBarItem.dragProgress = fraction(m.x);
-                        root.controlPressed(); // suppress capsule-level click handler
-                    }
-
-                    onPositionChanged: m => {
-                        if (pressed)
-                            progressBarItem.dragProgress = fraction(m.x);
-                    }
-
-                    onReleased: m => {
-                        if (activePlayer && activePlayer.canSeek && activePlayer.length > 0) {
-                            // MPRIS2 Seek() takes a signed delta in microseconds.
-                            const targetUs = Math.round(progressBarItem.dragProgress * activePlayer.length);
-                            activePlayer.seek(targetUs - activePlayer.position);
-                        }
-                        progressBarItem.isDragging = false;
-                    }
-
-                    onCanceled: {
-                        progressBarItem.isDragging = false;
-                    }
                 }
             }
 

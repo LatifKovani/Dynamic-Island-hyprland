@@ -14,6 +14,11 @@ Item {
     // Currently keyboard-highlighted row index (-1 = none)
     property int highlightedIndex: -1
 
+    // FIX 5: declare focus:true so this Item participates in the focus chain
+    // immediately when it is instantiated inside the Loader. Combined with
+    // forceActiveFocus() in the timer below this guarantees the compositor
+    // routes key events here even without a mouse interaction.
+    focus: true
     anchors.fill: parent
     opacity: showCondition ? 1 : 0
 
@@ -31,25 +36,28 @@ Item {
             highlightedIndex = -1;
             if (!appsLoaded)
                 scanProcess.running = true;
-            // Fix 1: use forceActiveFocus on the Item, not just the TextInput,
-            // so the FocusScope chain is satisfied before we drill into the input.
+            // FIX 5: grab focus immediately on show; the two-step timer
+            // sequence ensures the Wayland keyboard-focus grant from the
+            // compositor has propagated before we drill into the TextInput.
             focusTimer.restart();
         }
     }
 
-    // Fix 1: two-step focus — first grab the Item's focus scope, then the input.
+    // FIX 5: step 1 – claim focus at the Item level first so the FocusScope
+    // chain above us (islandContainer) sees an active child.
     Timer {
         id: focusTimer
-        interval: 60
+        interval: 50
         repeat: false
         onTriggered: {
             root.forceActiveFocus();
             searchInputFocusTimer.restart();
         }
     }
+    // FIX 5: step 2 – once the Item has focus, push it into the TextInput.
     Timer {
         id: searchInputFocusTimer
-        interval: 30
+        interval: 20
         repeat: false
         onTriggered: searchInput.forceActiveFocus()
     }
@@ -79,7 +87,6 @@ Item {
         }
     }
 
-    // Fix 2: clamp highlight index within current list
     function moveHighlight(delta) {
         if (shownApps.count === 0)
             return;
@@ -92,10 +99,9 @@ Item {
         resultsList.positionViewAtIndex(next, ListView.Contain);
     }
 
-    // ── Scan .desktop files via Python — now also reads Icon= field ──────
+    // ── Scan .desktop files via Python ────────────────────────────
     Process {
         id: scanProcess
-        // Fix 3: extended Python that resolves icon names → absolute paths
         command: ["python3", "-c", "import glob,os,configparser\n" + "def find_icon(name):\n" + "    if not name: return ''\n" + "    if os.path.isabs(name) and os.path.isfile(name): return name\n" + "    themes=['hicolor','Papirus','Adwaita','breeze','gnome']\n" + "    sizes=['48x48','32x32','64x64','scalable','22x22','24x24']\n" + "    exts=['.png','.svg','.xpm']\n" + "    bases=['/usr/share/icons',os.path.expanduser('~/.local/share/icons'),'/usr/local/share/icons']\n" + "    for b in bases:\n" + "        for t in themes:\n" + "            for s in sizes:\n" + "                for e in exts:\n" + "                    p=os.path.join(b,t,s,'apps',name+e)\n" + "                    if os.path.isfile(p): return p\n" + "    for b in ['/usr/share/pixmaps','/usr/local/share/pixmaps']:\n" + "        for e in exts:\n" + "            p=os.path.join(b,name+e)\n" + "            if os.path.isfile(p): return p\n" + "    return ''\n" + "apps=[]\n" + "paths=glob.glob('/usr/share/applications/*.desktop')\n" + "paths+=glob.glob(os.path.expanduser('~/.local/share/applications/*.desktop'))\n" + "for f in paths:\n" + "    c=configparser.ConfigParser(strict=False,interpolation=None)\n" + "    try:\n" + "        c.read(f)\n" + "        if 'Desktop Entry' not in c: continue\n" + "        e=c['Desktop Entry']\n" + "        if e.get('Type')!='Application': continue\n" + "        if e.get('NoDisplay','false').lower()=='true': continue\n" + "        n=e.get('Name','')\n" + "        x=e.get('Exec','').split('%')[0].strip()\n" + "        i=e.get('Icon','')\n" + "        if n and x: apps.append((n,x,find_icon(i)))\n" + "    except: pass\n" + "for n,x,i in sorted(apps,key=lambda a:a[0].lower()): print(n+'\\t'+x+'\\t'+i)\n"]
         stdout: SplitParser {
             onRead: data => {
@@ -129,8 +135,7 @@ Item {
         root.closeRequested();
     }
 
-    // ── Key handler at Item level so it works regardless of which
-    //    child has focus (Fix 2 lives here too) ────────────────────
+    // ── Key handler: intercepts all keys regardless of which child has focus ──
     Keys.onPressed: event => {
         switch (event.key) {
         case Qt.Key_Down:
@@ -233,13 +238,11 @@ Item {
                     clip: true
 
                     onTextChanged: root.filterApps(text)
-
-                    // Return/Escape are handled by the parent Item's Keys.onPressed
-                    // (they bubble up because TextInput only consumes keys it acts on)
                 }
             }
 
-            // Close button
+            // FIX 6: Close button – use explicit horizontal + vertical alignment
+            // on the Text so the × glyph is truly centred regardless of font metrics.
             Rectangle {
                 width: 34
                 height: 34
@@ -252,7 +255,9 @@ Item {
                 }
 
                 Text {
-                    anchors.centerIn: parent
+                    anchors.fill: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                     text: "×"
                     color: "white"
                     font.pixelSize: 20
@@ -287,14 +292,12 @@ Item {
                 model: shownApps
                 spacing: 2
                 clip: true
-                // Fix 2: allow keyboard scroll without mouse grab
                 keyNavigationEnabled: false
 
                 delegate: Rectangle {
                     width: ListView.view.width
                     height: 36
                     radius: 10
-                    // Fix 2: highlighted row gets a distinct tint
                     color: (index === root.highlightedIndex) ? Qt.rgba(1, 1, 1, 0.18) : rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
                     Behavior on color {
                         ColorAnimation {
@@ -308,7 +311,6 @@ Item {
                         anchors.rightMargin: 8
                         spacing: 8
 
-                        // Fix 3: app icon (shown when resolved path is non-empty)
                         Item {
                             width: 22
                             height: parent.height
@@ -325,11 +327,10 @@ Item {
                                 sourceSize: Qt.size(40, 40)
                             }
 
-                            // Fallback generic icon when no image resolved
                             Text {
                                 anchors.centerIn: parent
                                 visible: model.appIcon === "" || parent.children[0].status !== Image.Ready
-                                text: "\uf11b"   // fa-gamepad as neutral fallback
+                                text: "\uf11b"
                                 font.family: root.iconFontFamily
                                 font.pixelSize: 13
                                 color: Qt.rgba(1, 1, 1, 0.30)
@@ -353,7 +354,6 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         onClicked: root.launch(model.appExec)
-                        // Fix 2: hovering a row with the mouse syncs the highlight
                         onContainsMouseChanged: {
                             if (containsMouse)
                                 root.highlightedIndex = index;
