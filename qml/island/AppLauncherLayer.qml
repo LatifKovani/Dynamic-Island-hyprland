@@ -11,13 +11,8 @@ Item {
     property string textFontFamily: ""
     property bool appsLoaded: false
 
-    // Currently keyboard-highlighted row index (-1 = none)
     property int highlightedIndex: -1
 
-    // FIX 5: declare focus:true so this Item participates in the focus chain
-    // immediately when it is instantiated inside the Loader. Combined with
-    // forceActiveFocus() in the timer below this guarantees the compositor
-    // routes key events here even without a mouse interaction.
     focus: true
     anchors.fill: parent
     opacity: showCondition ? 1 : 0
@@ -36,28 +31,25 @@ Item {
             highlightedIndex = -1;
             if (!appsLoaded)
                 scanProcess.running = true;
-            // FIX 5: grab focus immediately on show; the two-step timer
-            // sequence ensures the Wayland keyboard-focus grant from the
-            // compositor has propagated before we drill into the TextInput.
             focusTimer.restart();
         }
     }
 
-    // FIX 5: step 1 – claim focus at the Item level first so the FocusScope
-    // chain above us (islandContainer) sees an active child.
+    // Step 1 — claim focus at Item level
     Timer {
         id: focusTimer
-        interval: 50
+        interval: 80
         repeat: false
         onTriggered: {
             root.forceActiveFocus();
             searchInputFocusTimer.restart();
         }
     }
-    // FIX 5: step 2 – once the Item has focus, push it into the TextInput.
+
+    // Step 2 — push focus into the TextInput once compositor has granted it
     Timer {
         id: searchInputFocusTimer
-        interval: 20
+        interval: 40
         repeat: false
         onTriggered: searchInput.forceActiveFocus()
     }
@@ -135,7 +127,7 @@ Item {
         root.closeRequested();
     }
 
-    // ── Key handler: intercepts all keys regardless of which child has focus ──
+    // ── Key handler ───────────────────────────────────────────────
     Keys.onPressed: event => {
         switch (event.key) {
         case Qt.Key_Down:
@@ -241,8 +233,7 @@ Item {
                 }
             }
 
-            // FIX 6: Close button – use explicit horizontal + vertical alignment
-            // on the Text so the × glyph is truly centred regardless of font metrics.
+            // Close button — X centered via anchors.centerIn
             Rectangle {
                 width: 34
                 height: 34
@@ -255,13 +246,12 @@ Item {
                 }
 
                 Text {
-                    anchors.fill: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
+                    anchors.centerIn: parent
                     text: "×"
                     color: "white"
-                    font.pixelSize: 20
+                    font.pixelSize: 22
                     font.family: root.textFontFamily
+                    font.weight: Font.Light
                 }
 
                 MouseArea {

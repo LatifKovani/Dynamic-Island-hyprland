@@ -77,7 +77,7 @@ PanelWindow {
     implicitHeight: root.overviewVisible ? Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(4 + root.overviewCapsuleHeight + 8), Math.ceil(root.controlCenterWindowHeight)) : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight))
     exclusiveZone: 45
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || islandContainer.appLauncherLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen))
+    focusable: islandContainer.appLauncherLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
 
     // ── FIX 1: appLauncherLayerVisible is now inside the condition (left of ?)
     // so WlrKeyboardFocus.OnDemand is correctly set when the launcher is open.
@@ -85,7 +85,15 @@ PanelWindow {
     // which never yielded OnDemand on the focused monitor, so the compositor
     // never routed keyboard events to this window.
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || islandContainer.appLauncherLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: {
+        if (!root.monitorFocused)
+            return WlrKeyboardFocus.None;
+        if (islandContainer.appLauncherLayerVisible)
+            return WlrKeyboardFocus.Exclusive;
+        if (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen))
+            return WlrKeyboardFocus.OnDemand;
+        return WlrKeyboardFocus.None;
+    }
 
     readonly property string iconFontFamily: userConfig.iconFontFamily
     readonly property string textFontFamily: userConfig.textFontFamily

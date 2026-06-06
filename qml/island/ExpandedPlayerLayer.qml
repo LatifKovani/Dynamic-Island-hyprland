@@ -32,6 +32,10 @@ Item {
 
     readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
 
+    onCurrentArtUrlChanged: {
+        artImage.source = "";
+        artImage.source = currentArtUrl;
+    }
     function buildWeekRow() {
         const days = [];
         const startOffset = _todayDow;
@@ -128,6 +132,7 @@ Item {
                 layer.smooth: true
 
                 Image {
+                    id: artImage
                     anchors.fill: parent
                     source: currentArtUrl
                     fillMode: Image.PreserveAspectCrop

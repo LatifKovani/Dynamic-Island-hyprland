@@ -12,9 +12,6 @@ Scope {
 
     readonly property var userConfig: UserConfig
 
-    // Fix 5: identify the primary screen.
-    // Quickshell exposes the primary screen as Quickshell.primaryScreen when
-    // available. We fall back to screens[0] for compositors that don't set it.
     readonly property var primaryScreen: Quickshell.primaryScreen ?? (Quickshell.screens.length > 0 ? Quickshell.screens[0] : null)
 
     function forEachWindow(callback) {
@@ -68,9 +65,10 @@ Scope {
 
     IpcHandler {
         target: "tide"
+
         function toggleAppLauncher() {
             shellRoot.forEachWindow(window => {
-                if (!window || !window.islandContainerRef)
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
                     return;
                 const ic = window.islandContainerRef;
                 if (ic.islandState === "app_launcher")
@@ -82,7 +80,7 @@ Scope {
 
         function togglePowerMenu() {
             shellRoot.forEachWindow(window => {
-                if (!window || !window.islandContainerRef)
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
                     return;
                 const ic = window.islandContainerRef;
                 if (ic.islandState === "power_menu")
@@ -94,36 +92,41 @@ Scope {
 
         function toggleControlCenter() {
             shellRoot.forEachWindow(window => {
-                if (window && window.islandContainerRef)
-                    window.islandContainerRef.handleConfiguredClickAction("toggleControlCenter");
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
+                    return;
+                window.islandContainerRef.handleConfiguredClickAction("toggleControlCenter");
             });
         }
 
         function showLyrics() {
             shellRoot.forEachWindow(window => {
-                if (window && window.islandContainerRef)
-                    window.islandContainerRef.showLyricsCapsule();
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
+                    return;
+                window.islandContainerRef.showLyricsCapsule();
             });
         }
 
         function showCustom() {
             shellRoot.forEachWindow(window => {
-                if (window && window.islandContainerRef)
-                    window.islandContainerRef.showCustomCapsule();
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
+                    return;
+                window.islandContainerRef.showCustomCapsule();
             });
         }
 
         function showClock() {
             shellRoot.forEachWindow(window => {
-                if (window && window.islandContainerRef)
-                    window.islandContainerRef.showTimeCapsule();
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
+                    return;
+                window.islandContainerRef.showTimeCapsule();
             });
         }
 
         function togglePlayer() {
             shellRoot.forEachWindow(window => {
-                if (window && window.islandContainerRef)
-                    window.islandContainerRef.handleConfiguredClickAction("toggleExpandedPlayer");
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
+                    return;
+                window.islandContainerRef.handleConfiguredClickAction("toggleExpandedPlayer");
             });
         }
     }
@@ -175,16 +178,10 @@ Scope {
         SystemServices.requestScreenRecordingSnapshot();
     }
 
-    // Fix 5: Only spawn a DynamicIslandWindow on the primary screen.
-    // The Variants model is changed from all screens to a single-item
-    // array containing only the primary screen.
     Variants {
         id: panelVariants
 
-        // Filter: only the primary screen. If primaryScreen is null
-        // (e.g. compositor hasn't reported it yet) fall back to all screens
-        // so the island still appears somewhere.
-        model: shellRoot.primaryScreen ? [shellRoot.primaryScreen] : Quickshell.screens
+        model: Quickshell.screens // all screens
 
         DynamicIslandWindow {
             required property var modelData
