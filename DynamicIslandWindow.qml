@@ -88,9 +88,9 @@ PanelWindow {
     WlrLayershell.keyboardFocus: {
         if (!root.monitorFocused)
             return WlrKeyboardFocus.None;
-        if (islandContainer.appLauncherLayerVisible)
+        if (islandContainer.appLauncherLayerVisible || islandContainer.powerMenuLayerVisible)
             return WlrKeyboardFocus.Exclusive;
-        if (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen))
+        if (root.overviewVisible || root.connectivityPromptActive || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen))
             return WlrKeyboardFocus.OnDemand;
         return WlrKeyboardFocus.None;
     }
@@ -361,7 +361,7 @@ PanelWindow {
     FocusScope {
         id: islandContainer
         anchors.fill: parent
-        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.appLauncherLayerVisible)
+        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.appLauncherLayerVisible || islandContainer.powerMenuLayerVisible)
 
         property string islandState: "normal"
         property string splitIcon: root.defaultSplitIcon

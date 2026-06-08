@@ -30,6 +30,15 @@ Item {
         }
     }
 
+    // Always return to the media player tab when the expanded player opens.
+    // Without this, keepAlive keeps the component alive between sessions, so
+    // a leftover "tray" activeTab would make ExpandedPlayerLayer.showCondition
+    // stay false — skipping the album-art retry that fires on showConditionChanged.
+    onShowConditionChanged: {
+        if (showCondition)
+            activeTab = "nook";
+    }
+
     // ── Tab bar ───────────────────────────────────────────────────
     Row {
         id: tabBar

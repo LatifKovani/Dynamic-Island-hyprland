@@ -22,6 +22,9 @@ Item {
     property string textFontFamily: userConfig.textFontFamily
     property real visualizerPhase: 0
 
+    // ── Album art retry state ─────────────────────────────────────
+    property int artRetryCount: 0
+
     readonly property var _now: new Date()
     readonly property int _todayDay: _now.getDate()
     readonly property int _todayMonth: _now.getMonth()
@@ -32,10 +35,39 @@ Item {
 
     readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
 
+    // On URL change: reset retry state and force a clean reload.
+    // We clear then re-set to break any stale Qt image cache entry for this URL.
     onCurrentArtUrlChanged: {
+        artRetryCount = 0;
+        artRetryTimer.stop();
         artImage.source = "";
         artImage.source = currentArtUrl;
     }
+
+    // When the expanded player becomes visible, re-attempt if the image
+    // isn't loaded (covers the race-condition-on-login case where the art
+    // file didn't exist yet when the URL first arrived).
+    onShowConditionChanged: {
+        if (showCondition && currentArtUrl !== "" && artImage.status !== Image.Ready && artImage.status !== Image.Loading) {
+            artRetryCount = 0;
+            artImage.source = "";
+            artImage.source = currentArtUrl;
+        }
+    }
+
+    // Retry timer: fires 1 s after an Image.Error is detected.
+    Timer {
+        id: artRetryTimer
+        interval: 1000
+        repeat: false
+        onTriggered: {
+            if (currentArtUrl !== "" && artImage.status !== Image.Ready) {
+                artImage.source = "";
+                artImage.source = currentArtUrl;
+            }
+        }
+    }
+
     function buildWeekRow() {
         const days = [];
         const startOffset = _todayDow;
@@ -134,14 +166,26 @@ Item {
                 Image {
                     id: artImage
                     anchors.fill: parent
-                    source: currentArtUrl
+                    // Note: source is managed imperatively via onCurrentArtUrlChanged
+                    // and the retry logic below — no declarative binding to avoid
+                    // the binding-vs-imperative conflict that can swallow the initial load.
                     fillMode: Image.PreserveAspectCrop
                     visible: source.toString() !== ""
                     sourceSize: Qt.size(192, 192)
                     smooth: true
                     mipmap: true
                     cache: false
+
+                    // Retry on error: the art file may not be written yet at login time.
+                    // Try up to 5 times with a 1 s gap before giving up.
+                    onStatusChanged: {
+                        if (status === Image.Error && source.toString() !== "" && root.artRetryCount < 5) {
+                            root.artRetryCount++;
+                            artRetryTimer.restart();
+                        }
+                    }
                 }
+
                 Text {
                     anchors.centerIn: parent
                     visible: currentArtUrl === ""
@@ -239,7 +283,7 @@ Item {
                 height: 20
 
                 property bool isDragging: false
-                property bool isHovered: false      // driven by seekMouseArea below
+                property bool isHovered: false
                 property real dragProgress: 0
                 readonly property real displayProgress: isDragging ? dragProgress : trackProgress
 
@@ -248,7 +292,7 @@ Item {
                 MouseArea {
                     id: seekMouseArea
                     anchors.fill: parent
-                    z: -1           // visual elements (track, knob, labels) render on top
+                    z: -1
                     hoverEnabled: true
                     preventStealing: true
                     cursorShape: Qt.PointingHandCursor
@@ -305,7 +349,6 @@ Item {
                     anchors.leftMargin: 5
                     anchors.right: tR.left
                     anchors.rightMargin: 5
-                    // isHovered is set by seekMouseArea (declared above — safe backward ref)
                     height: progressBarItem.isHovered || progressBarItem.isDragging ? 6 : 4
                     radius: height / 2
                     color: Qt.rgba(1, 1, 1, 0.12)

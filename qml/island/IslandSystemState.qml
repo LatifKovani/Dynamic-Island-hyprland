@@ -309,6 +309,12 @@ Item {
                 icon: base + "spotify.svg",
                 iconKind: "theme"
             };
+        case "obsidian":
+            return {
+                name: "Obsidian",
+                icon: base + "obsidian.svg",
+                iconKind: "theme"
+            };
         default:
             return {
                 name: lower.charAt(0).toUpperCase() + lower.slice(1),
