@@ -79,11 +79,6 @@ PanelWindow {
     aboveWindows: true
     focusable: islandContainer.appLauncherLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
 
-    // ── FIX 1: appLauncherLayerVisible is now inside the condition (left of ?)
-    // so WlrKeyboardFocus.OnDemand is correctly set when the launcher is open.
-    // Previously it was in the ELSE branch: "... : WlrKeyboardFocus.None || appLauncherLayerVisible"
-    // which never yielded OnDemand on the focused monitor, so the compositor
-    // never routed keyboard events to this window.
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: {
         if (!root.monitorFocused)
@@ -386,6 +381,9 @@ PanelWindow {
         property string splitOriginSide: "none"
         property string restingState: "normal"
         property bool expandedByPlayerAutoOpen: false
+        property string preloadedArtUrl: ""
+        property bool preloadedArtReady: false
+        property string lastArtUrl: ""
         property real customCapsuleWidth: 220
         property real lyricsCapsuleWidth: 220
         property bool sideSwipeSettling: false
@@ -450,6 +448,20 @@ PanelWindow {
             id: mediaController
 
             expanded: islandContainer.islandState === "expanded"
+        }
+        // ADD THIS PRELOADER IMAGE:
+        Image {
+            id: artPreloader
+            visible: false
+            asynchronous: false
+            cache: true
+            sourceSize: Qt.size(192, 192)
+
+            onStatusChanged: {
+                if (status === Image.Ready) {
+                    islandContainer.preloadedArtReady = true;
+                }
+            }
         }
 
         BluetoothConnectionTracker {
@@ -1043,6 +1055,13 @@ PanelWindow {
                 showExpandedPlayer(true);
             }
         }
+        onCurrentArtUrlChanged: {
+            if (currentArtUrl !== "" && currentArtUrl !== islandContainer.lastArtUrl) {
+                islandContainer.lastArtUrl = currentArtUrl;
+                islandContainer.preloadedArtReady = false;
+                artPreloader.source = currentArtUrl;
+            }
+        }
 
         Rectangle {
             id: mainCapsule
@@ -1534,16 +1553,15 @@ PanelWindow {
 
             Loader {
                 id: expandedPlayerLoader
-                anchors.fill: parent
-                property bool keepAlive: false
-                active: islandContainer.expandedLayerVisible || keepAlive
-                onLoaded: keepAlive = true
+                active: islandContainer.expandedLayerVisible
                 asynchronous: false
                 visible: islandContainer.expandedLayerVisible
+                anchors.fill: parent
 
                 sourceComponent: Component {
                     NookTrayLayer {
                         currentArtUrl: islandContainer.currentArtUrl
+                        preloadedArtSource: islandContainer.preloadedArtReady ? artPreloader.source : ""
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
                         timePlayed: islandContainer.timePlayed

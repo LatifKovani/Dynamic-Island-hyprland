@@ -12,6 +12,7 @@ Item {
 
     property bool showCondition: false
     property string currentArtUrl: ""
+    property string preloadedArtSource: ""
     property string currentTrack: ""
     property string currentArtist: ""
     property string timePlayed: "0:00"
@@ -22,8 +23,10 @@ Item {
     property string textFontFamily: userConfig.textFontFamily
     property real visualizerPhase: 0
 
-    // ── Album art retry state ─────────────────────────────────────
+    // ── Album art retry state with exponential backoff ──
     property int artRetryCount: 0
+    property int artMaxRetries: 10
+    property bool _forceRefresh: false
 
     readonly property var _now: new Date()
     readonly property int _todayDay: _now.getDate()
@@ -35,35 +38,61 @@ Item {
 
     readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
 
-    // On URL change: reset retry state and force a clean reload.
-    // We clear then re-set to break any stale Qt image cache entry for this URL.
-    onCurrentArtUrlChanged: {
-        artRetryCount = 0;
-        artRetryTimer.stop();
-        artImage.source = "";
-        artImage.source = currentArtUrl;
-    }
-
-    // When the expanded player becomes visible, re-attempt if the image
-    // isn't loaded (covers the race-condition-on-login case where the art
-    // file didn't exist yet when the URL first arrived).
-    onShowConditionChanged: {
-        if (showCondition && currentArtUrl !== "" && artImage.status !== Image.Ready && artImage.status !== Image.Loading) {
+    // Public function to manually refresh artwork (called by parent when becoming visible)
+    function refreshArtwork() {
+        if (currentArtUrl !== "") {
             artRetryCount = 0;
+            artRetryTimer.stop();
+            var url = currentArtUrl;
             artImage.source = "";
-            artImage.source = currentArtUrl;
+            artImage.source = url;
         }
     }
 
-    // Retry timer: fires 1 s after an Image.Error is detected.
+    // On URL change: reset retry state and load
+    onCurrentArtUrlChanged: {
+        artRetryCount = 0;
+        artRetryTimer.stop();
+        if (currentArtUrl !== "") {
+            artImage.source = "";
+            artImage.source = currentArtUrl;
+        } else {
+            artImage.source = "";
+        }
+    }
+
+    // When becoming visible, refresh artwork if needed
+    onShowConditionChanged: {
+        if (showCondition) {
+            // Small delay to ensure the component is fully visible
+            refreshTimer.start();
+        }
+    }
+
     Timer {
-        id: artRetryTimer
-        interval: 1000
+        id: refreshTimer
+        interval: 50
         repeat: false
         onTriggered: {
-            if (currentArtUrl !== "" && artImage.status !== Image.Ready) {
+            if (showCondition && currentArtUrl !== "" && artImage.status !== Image.Ready) {
+                refreshArtwork();
+            }
+        }
+    }
+
+    // Exponential backoff retry timer
+    Timer {
+        id: artRetryTimer
+        repeat: true
+        interval: Math.min(1000 * Math.pow(1.5, artRetryCount), 8000)
+        onTriggered: {
+            if (currentArtUrl !== "" && artImage.status !== Image.Ready && artRetryCount < artMaxRetries) {
+                artRetryCount++;
+                console.log("Retrying album art load attempt", artRetryCount, "interval:", interval);
                 artImage.source = "";
                 artImage.source = currentArtUrl;
+            } else if (artImage.status === Image.Ready || artRetryCount >= artMaxRetries) {
+                artRetryTimer.stop();
             }
         }
     }
@@ -150,11 +179,6 @@ Item {
             height: 96
             anchors.verticalCenter: parent.verticalCenter
 
-            // artSource and artMask are rendered off-screen via their layers
-            // and composited by OpacityMask below.
-            // IMPORTANT: do NOT add layer.effect to any item in this same
-            // component using Qt5Compat.GraphicalEffects — it corrupts the
-            // shared ShaderEffect pipeline and breaks OpacityMask.
             Rectangle {
                 id: artSource
                 anchors.fill: parent
@@ -166,9 +190,6 @@ Item {
                 Image {
                     id: artImage
                     anchors.fill: parent
-                    // Note: source is managed imperatively via onCurrentArtUrlChanged
-                    // and the retry logic below — no declarative binding to avoid
-                    // the binding-vs-imperative conflict that can swallow the initial load.
                     fillMode: Image.PreserveAspectCrop
                     visible: source.toString() !== ""
                     sourceSize: Qt.size(192, 192)
@@ -176,19 +197,21 @@ Item {
                     mipmap: true
                     cache: false
 
-                    // Retry on error: the art file may not be written yet at login time.
-                    // Try up to 5 times with a 1 s gap before giving up.
                     onStatusChanged: {
-                        if (status === Image.Error && source.toString() !== "" && root.artRetryCount < 5) {
-                            root.artRetryCount++;
-                            artRetryTimer.restart();
+                        if (status === Image.Error && source.toString() !== "" && root.artRetryCount < root.artMaxRetries) {
+                            if (!artRetryTimer.running) {
+                                artRetryTimer.restart();
+                            }
+                        } else if (status === Image.Ready) {
+                            root.artRetryCount = 0;
+                            artRetryTimer.stop();
                         }
                     }
                 }
 
                 Text {
                     anchors.centerIn: parent
-                    visible: currentArtUrl === ""
+                    visible: currentArtUrl === "" || (artImage.status !== Image.Ready && artImage.status !== Image.Loading)
                     text: "\uf001"
                     font.family: iconFontFamily
                     font.pixelSize: 24
@@ -287,8 +310,6 @@ Item {
                 property real dragProgress: 0
                 readonly property real displayProgress: isDragging ? dragProgress : trackProgress
 
-                // ── seekMouseArea declared FIRST so progressTrack and seekKnob
-                //    can reference its properties without forward-reference errors.
                 MouseArea {
                     id: seekMouseArea
                     anchors.fill: parent
@@ -324,7 +345,6 @@ Item {
                     }
                 }
 
-                // ── Left time label ──────────────────────────────────
                 Text {
                     id: tL
                     anchors.left: parent.left
@@ -341,7 +361,6 @@ Item {
                     }
                 }
 
-                // ── Track ────────────────────────────────────────────
                 Rectangle {
                     id: progressTrack
                     anchors.verticalCenter: parent.verticalCenter
@@ -359,7 +378,6 @@ Item {
                         }
                     }
 
-                    // Fill
                     Rectangle {
                         height: parent.height
                         radius: parent.radius
@@ -374,9 +392,6 @@ Item {
                         }
                     }
 
-                    // Knob — appears on hover/drag.
-                    // No layer.effect here: adding Qt5Compat GraphicalEffects effects
-                    // as layer.effect breaks the OpacityMask used for album art.
                     Rectangle {
                         id: seekKnob
                         width: 10
@@ -396,7 +411,6 @@ Item {
                     }
                 }
 
-                // ── Right time label ─────────────────────────────────
                 Text {
                     id: tR
                     anchors.right: parent.right

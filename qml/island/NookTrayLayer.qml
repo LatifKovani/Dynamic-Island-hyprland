@@ -11,6 +11,7 @@ Item {
     property string currentArtUrl: ""
     property string currentTrack: ""
     property string currentArtist: ""
+    property string preloadedArtSource: ""
     property string timePlayed: "0:00"
     property string timeTotal: "0:00"
     property real trackProgress: 0
@@ -230,6 +231,7 @@ Item {
             enabled: root.activeTab === "nook"
             showCondition: root.activeTab === "nook" && root.showCondition
             currentArtUrl: root.currentArtUrl
+            preloadedArtSource: root.preloadedArtSource
             currentTrack: root.currentTrack
             currentArtist: root.currentArtist
             timePlayed: root.timePlayed
