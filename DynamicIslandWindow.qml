@@ -78,10 +78,12 @@ PanelWindow {
     implicitHeight: root.overviewVisible ? Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(4 + root.overviewCapsuleHeight + 8), Math.ceil(root.controlCenterWindowHeight)) : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight))
     exclusiveZone: 45
     aboveWindows: true
-    focusable: islandContainer.appLauncherLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
+    focusable: islandContainer.appLauncherLayerVisible || islandContainer.wallpaperPickerLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
 
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: {
+        if (islandContainer.wallpaperPickerLayerVisible)
+            return WlrKeyboardFocus.Exclusive;
         if (!root.monitorFocused)
             return WlrKeyboardFocus.None;
         if (islandContainer.appLauncherLayerVisible || islandContainer.powerMenuLayerVisible)
@@ -392,7 +394,7 @@ PanelWindow {
         readonly property int notificationAutoHideInterval: 4200
         readonly property int bluetoothExpandedAutoHideInterval: 2500
         readonly property int swipeAnimationDuration: 220
-        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher"
+        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker"
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
@@ -419,6 +421,8 @@ PanelWindow {
         readonly property string timePlayed: mediaController.timePlayed
         readonly property string timeTotal: mediaController.timeTotal
         readonly property bool screenRecordingActive: root.screenRecordingActive
+        readonly property bool wallpaperPickerLayerVisible: !root.overviewVisible && islandState === "wallpaper_picker"
+
         readonly property var bluetoothDevices: bluetoothConnectionTracker.devices
         readonly property var overviewView: overviewLoader.item && overviewLoader.item.overviewView ? overviewLoader.item.overviewView : null
 
@@ -973,6 +977,14 @@ PanelWindow {
             mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
             stopAutoHideTimer();
         }
+        function showWallpaperPicker() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "wallpaper_picker";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
 
         function showCustomCapsule() {
             if (!hasCustomLeftItems) {
@@ -1099,6 +1111,8 @@ PanelWindow {
                     return 420;
                 case "app_launcher":
                     return 580;
+                case "wallpaper_picker":
+                    return 680;
                 case "expanded":
                     return 620;
                 case "bluetooth_expanded":
@@ -1122,6 +1136,8 @@ PanelWindow {
                     return 130;
                 case "app_launcher":
                     return 390;
+                case "wallpaper_picker":
+                    return 390;
                 case "expanded":
                     return 192;
                 case "bluetooth_expanded":
@@ -1142,6 +1158,8 @@ PanelWindow {
                 case "power_menu":
                     return 34;
                 case "app_launcher":
+                    return 34;
+                case "wallpaper_picker":
                     return 34;
                 case "expanded":
                 case "bluetooth_expanded":
@@ -1652,6 +1670,24 @@ PanelWindow {
                 }
             }
 
+            Loader {
+                id: wallpaperPickerLoader
+                anchors.fill: parent
+                property bool keepAlive: false
+                active: islandContainer.wallpaperPickerLayerVisible || keepAlive
+                onLoaded: keepAlive = true
+                asynchronous: false
+                visible: islandContainer.wallpaperPickerLayerVisible
+
+                sourceComponent: Component {
+                    WallpaperPickerLayer {
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        showCondition: islandContainer.wallpaperPickerLayerVisible
+                        onCloseRequested: islandContainer.smartRestoreState()
+                    }
+                }
+            }
             Loader {
                 id: controlCenterLoader
                 anchors.fill: parent

@@ -1,6 +1,5 @@
-//-- TODO: Remove the red button with, also refresh button replace with an icon of search .
-// -- FIX: Icon themes for apps, are not getting the actual icon theme which i use macos tahoe but using the default of arch. Fix to use macos theme icon, maybe with absolute path or smth.
-//-- TODO: Add a better design when i hover through app launcher, like in the leftside beginning of app name should have for example a vertical line alongside app name just to indicate where it is.
+//-- FIX:: Icon themes for apps, are not getting the actual icon theme which i use macos tahoe but using the default of arch. Fix to use macos theme icon, maybe with absolute path or smth.
+//
 import QtQuick
 import Quickshell.Io
 
@@ -171,7 +170,56 @@ Item {
             height: 34
             spacing: 8
 
-            // Refresh button
+            // Search input — takes all remaining width
+            Rectangle {
+                width: parent.width - 34 - 34 - 16
+                height: 34
+                radius: 17
+                color: Qt.rgba(1, 1, 1, 0.09)
+
+                // Search icon inside the field
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "\uf002"   // fa-search
+                    font.family: root.iconFontFamily
+                    font.pixelSize: 12
+                    color: searchInput.activeFocus ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(1, 1, 1, 0.28)
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 120
+                        }
+                    }
+                }
+
+                Text {
+                    anchors.fill: parent
+                    anchors.leftMargin: 30
+                    verticalAlignment: Text.AlignVCenter
+                    text: "Search apps…"
+                    color: Qt.rgba(1, 1, 1, 0.28)
+                    font.pixelSize: 13
+                    font.family: root.textFontFamily
+                    visible: searchInput.text === "" && !searchInput.activeFocus
+                }
+
+                TextInput {
+                    id: searchInput
+                    anchors.fill: parent
+                    anchors.leftMargin: 30
+                    anchors.rightMargin: 14
+                    verticalAlignment: TextInput.AlignVCenter
+                    color: "white"
+                    font.pixelSize: 13
+                    font.family: root.textFontFamily
+                    clip: true
+
+                    onTextChanged: root.filterApps(text)
+                }
+            }
+
+            // Refresh button — subtle, matches close style
             Rectangle {
                 width: 34
                 height: 34
@@ -185,16 +233,26 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "\uf021"
+                    text: "\uf021"   // fa-refresh
                     font.family: root.iconFontFamily
                     font.pixelSize: 13
-                    color: Qt.rgba(1, 1, 1, 0.55)
+                    color: Qt.rgba(1, 1, 1, 0.50)
+
+                    RotationAnimator {
+                        id: refreshSpin
+                        target: parent
+                        from: 0
+                        to: 360
+                        duration: 500
+                        running: false
+                    }
                 }
 
                 MouseArea {
                     id: refreshMouse
                     anchors.fill: parent
                     onClicked: {
+                        refreshSpin.running = true;
                         allApps.clear();
                         shownApps.clear();
                         root.appsLoaded = false;
@@ -203,45 +261,12 @@ Item {
                 }
             }
 
-            // Search input
-            Rectangle {
-                width: parent.width - 34 - 34 - 16
-                height: 34
-                radius: 17
-                color: Qt.rgba(1, 1, 1, 0.09)
-
-                Text {
-                    anchors.fill: parent
-                    anchors.leftMargin: 14
-                    verticalAlignment: Text.AlignVCenter
-                    text: "Search apps…"
-                    color: Qt.rgba(1, 1, 1, 0.28)
-                    font.pixelSize: 13
-                    font.family: root.textFontFamily
-                    visible: searchInput.text === "" && !searchInput.activeFocus
-                }
-
-                TextInput {
-                    id: searchInput
-                    anchors.fill: parent
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 14
-                    verticalAlignment: TextInput.AlignVCenter
-                    color: "white"
-                    font.pixelSize: 13
-                    font.family: root.textFontFamily
-                    clip: true
-
-                    onTextChanged: root.filterApps(text)
-                }
-            }
-
-            // Close button — X centered via anchors.centerIn
+            // Close button — same style as refresh, no red
             Rectangle {
                 width: 34
                 height: 34
                 radius: 17
-                color: xMouse.pressed ? "#9e2020" : "#c03535"
+                color: closeMouse.pressed ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.07)
                 Behavior on color {
                     ColorAnimation {
                         duration: 100
@@ -250,15 +275,14 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "×"
-                    color: "white"
-                    font.pixelSize: 22
-                    font.family: root.textFontFamily
-                    font.weight: Font.Light
+                    text: "\uf00d"   // fa-times
+                    font.family: root.iconFontFamily
+                    font.pixelSize: 13
+                    color: Qt.rgba(1, 1, 1, 0.50)
                 }
 
                 MouseArea {
-                    id: xMouse
+                    id: closeMouse
                     anchors.fill: parent
                     onClicked: root.closeRequested()
                 }
@@ -291,7 +315,7 @@ Item {
                     width: ListView.view.width
                     height: 36
                     radius: 10
-                    color: (index === root.highlightedIndex) ? Qt.rgba(1, 1, 1, 0.18) : rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
+                    color: (index === root.highlightedIndex) ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
                     Behavior on color {
                         ColorAnimation {
                             duration: 80
@@ -300,10 +324,32 @@ Item {
 
                     Row {
                         anchors.fill: parent
-                        anchors.leftMargin: 8
+                        anchors.leftMargin: 0
                         anchors.rightMargin: 8
-                        spacing: 8
+                        spacing: 0
 
+                        // ── Active indicator bar ──────────────────
+                        Rectangle {
+                            width: 3
+                            height: parent.height * 0.55
+                            radius: 1.5
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: "#60a5fa"
+                            opacity: (index === root.highlightedIndex) ? 1 : 0
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: 100
+                                }
+                            }
+                        }
+
+                        // Gap after bar
+                        Item {
+                            width: 7
+                            height: 1
+                        }
+
+                        // App icon
                         Item {
                             width: 22
                             height: parent.height
@@ -330,15 +376,27 @@ Item {
                             }
                         }
 
+                        // Gap between icon and name
+                        Item {
+                            width: 8
+                            height: 1
+                        }
+
+                        // App name
                         Text {
-                            width: parent.width - 22 - 8
+                            width: parent.width - 3 - 7 - 22 - 8
                             anchors.verticalCenter: parent.verticalCenter
                             text: model.appName
-                            color: "white"
+                            color: index === root.highlightedIndex ? "white" : Qt.rgba(1, 1, 1, 0.80)
                             font.pixelSize: 13
                             font.family: root.textFontFamily
-                            font.weight: Font.Medium
+                            font.weight: index === root.highlightedIndex ? Font.SemiBold : Font.Medium
                             elide: Text.ElideRight
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 80
+                                }
+                            }
                         }
                     }
 

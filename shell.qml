@@ -77,6 +77,17 @@ Scope {
                     ic.showAppLauncher();
             });
         }
+        function toggleWallpaperPicker() {
+            shellRoot.forEachWindow(window => {
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
+                    return;
+                const ic = window.islandContainerRef;
+                if (ic.islandState === "wallpaper_picker")
+                    ic.smartRestoreState();
+                else
+                    ic.showWallpaperPicker();
+            });
+        }
 
         function togglePowerMenu() {
             shellRoot.forEachWindow(window => {
