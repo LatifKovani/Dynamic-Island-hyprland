@@ -30,13 +30,18 @@ Item {
     property int iconPixelSize: 16
     property int iconBoxSize: 18
     property int batteryIconWidth: 37
-    property int batteryIconHeight: 15
+    property int batteryIconHeight: 17
+    property int batteryFontSize: 13
+    property int batteryFontSizeCharging: 12
+    property int batteryBoltSize: 10
     property int batteryTipWidth: 2
     property int batteryTipHeight: 5
-    property int batteryOuterRadius: 4
+    property int batteryOuterRadius: 6
     property int batteryInnerRadius: 3
     property real iconVerticalOffset: 1
     property int recordingDotSpacing: 12
+    property real batteryChargingXOffset: 0
+    property real batteryChargingYOffset: 0
     readonly property string chargingIconGlyph: "\uf0e7"
 
     readonly property real clampedProgress: Math.max(0, Math.min(1, -transitionProgress))
@@ -99,8 +104,6 @@ Item {
                 readonly property bool hasIcon: modelData.icon !== undefined && modelData.icon !== ""
                 readonly property bool isCava: modelData.kind === "cava"
                 readonly property bool isBattery: modelData.kind === "battery"
-                // "theme" = system icon via Quickshell.iconPath (Image)
-                // "glyph" = Nerd Font character (Text)
                 readonly property bool isThemeIcon: hasIcon && modelData.iconKind === "theme"
                 readonly property bool isGlyphIcon: hasIcon && modelData.iconKind !== "theme"
                 readonly property bool hasLeadingVisual: hasIcon || isBattery
@@ -141,32 +144,11 @@ Item {
                         anchors.centerIn: parent
                         visible: parent.parent.isGlyphIcon && !parent.parent.isBattery
                         text: parent.parent.isGlyphIcon ? (modelData.icon || "") : ""
-                        color: {
-                            const id = modelData.id || "";
-                            if (id === "cpu" || id === "ram") {
-                                const txt = modelData.text || "";
-                                let level = -1;
-                                if (txt.endsWith("%")) {
-                                    level = parseFloat(txt) / 100.0;
-                                } else if (txt.indexOf("/") !== -1) {
-                                    const slash = txt.indexOf("/");
-                                    const used = parseFloat(txt.substring(0, slash));
-                                    const total = parseFloat(txt.substring(slash + 1));
-                                    if (total > 0)
-                                        level = used / total;
-                                }
-                                if (level >= 0.70)
-                                    return "#ff453a";
-                                if (level >= 0.50)
-                                    return "#ff9f0a";
-                                if (level >= 0.30)
-                                    return "#ffd60a";
-                            }
-                            return "white";
-                        }
+                        // TODO: CPU/RAM icon color stays white always
+                        color: "white"
                     }
 
-                    // ── macOS Tahoe battery shape ──────────────────────────────────
+                    // ── iOS 27-style battery shape ────────────────────────────────
                     Item {
                         id: batteryShape
                         visible: parent.parent.isBattery
@@ -176,16 +158,13 @@ Item {
 
                         readonly property real level: Math.max(0, Math.min(100, Number(modelData.level || 0)))
                         readonly property bool charging: modelData.isCharging || false
-                        readonly property color fillColor: {
-                            if (charging)
-                                return "#30d158";
-                            if (level <= 5)
-                                return "#ff3b30";
-                            if (level <= 25)
+                        readonly property color bodyColor: {
+                            if (level <= 20)
                                 return "#ff3b30";
                             return "white";
                         }
-                        // Outer body
+                        readonly property color emptyColor: Qt.rgba(1, 1, 1, 0.45)
+
                         Rectangle {
                             id: batteryBody
                             anchors.left: parent.left
@@ -193,20 +172,30 @@ Item {
                             width: parent.width - root.batteryTipWidth - 1
                             height: parent.height
                             radius: root.batteryOuterRadius
-                            color: Qt.rgba(209, 209, 209, 0.60)
-                            border.color: Qt.rgba(1, 1, 1, 0.55)
-                            border.width: 1.1
+                            color: batteryShape.emptyColor
+                            border.width: 0
+                            clip: true
 
-                            // Fill
+                            // FIX: battery fill — when level is 100% right edge is rounded,
+                            // otherwise a flat rectangle covers the right rounded corner.
                             Rectangle {
                                 id: batteryFill
-                                anchors.left: parent.left
                                 anchors.top: parent.top
                                 anchors.bottom: parent.bottom
-                                anchors.margins: 2
-                                radius: root.batteryInnerRadius
-                                width: Math.max(0, (parent.width - 4) * (batteryShape.level / 100.0))
-                                color: batteryShape.fillColor
+                                anchors.left: parent.left
+                                radius: root.batteryOuterRadius
+                                width: batteryShape.charging ? parent.width : Math.max(root.batteryOuterRadius * 2, parent.width * (batteryShape.level / 100.0))
+                                color: batteryShape.bodyColor
+
+                                // Flat right edge only when not full and not charging
+                                Rectangle {
+                                    visible: !batteryShape.charging && batteryShape.level < 100
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    anchors.right: parent.right
+                                    width: root.batteryOuterRadius
+                                    color: parent.color
+                                }
 
                                 Behavior on width {
                                     NumberAnimation {
@@ -214,61 +203,76 @@ Item {
                                         easing.type: Easing.OutCubic
                                     }
                                 }
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: 300
+                                    }
+                                }
                             }
 
-                            // Percentage + lightning bolt INSIDE battery (only when charging)
+                            // Number + bolt (charging)
                             Row {
                                 visible: batteryShape.charging
                                 anchors.centerIn: parent
-                                spacing: 1
+                                anchors.horizontalCenterOffset: root.batteryChargingXOffset
+                                anchors.verticalCenterOffset: root.batteryChargingYOffset
+                                spacing: 2
                                 z: 2
 
                                 Text {
                                     text: batteryShape.level + ""
-                                    color: "white"
-                                    font.pixelSize: root.batteryIconHeight - 3
+                                    color: "black"
+                                    font.pixelSize: root.batteryFontSizeCharging
                                     font.family: root.textFontFamily
-                                    font.weight: Font.Bold
+                                    font.weight: Font.DemiBold
                                     verticalAlignment: Text.AlignVCenter
+                                    anchors.verticalCenter: parent.verticalCenter
                                 }
 
                                 Text {
                                     text: "\uf0e7"
-                                    color: "white"
-                                    font.pixelSize: root.batteryIconHeight - 4
+                                    color: "#242424"
+                                    font.pixelSize: root.batteryBoltSize
                                     font.family: root.iconFontFamily
-                                    font.weight: Font.Bold
                                     verticalAlignment: Text.AlignVCenter
+                                    anchors.verticalCenter: parent.verticalCenter
                                 }
                             }
 
-                            // Percentage INSIDE battery (only when discharging)
+                            // Number (discharging)
                             Text {
                                 visible: !batteryShape.charging
                                 anchors.centerIn: parent
-                                text: batteryShape.level + " %"
-                                color: "black"
-                                font.pixelSize: root.batteryIconHeight - 4
+                                text: batteryShape.level + ""
+                                color: batteryShape.level <= 20 ? "white" : "black"
+                                font.pixelSize: root.batteryFontSize
                                 font.family: root.textFontFamily
-                                font.weight: Font.Bold
+                                font.weight: Font.DemiBold
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 z: 2
                             }
                         }
 
-                        // Tip nub
+                        // Tip nub — white when full
                         Rectangle {
                             width: root.batteryTipWidth
                             height: root.batteryTipHeight
                             radius: Math.round(root.batteryTipWidth / 2)
-                            color: Qt.rgba(1, 1, 1, 0.55)
+                            color: batteryShape.level >= 100 ? batteryShape.bodyColor : batteryShape.emptyColor
                             anchors.left: batteryBody.right
                             anchors.leftMargin: 1
                             anchors.verticalCenter: parent.verticalCenter
+
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 300
+                                }
+                            }
                         }
                     }
                 }
+
                 Text {
                     id: valueText
                     visible: !parent.isCava && !parent.isBattery
@@ -278,30 +282,8 @@ Item {
                     text: modelData.text || ""
                     font.pixelSize: root.textPixelSize
                     font.weight: Font.Bold
-                    color: {
-                        const id = modelData.id || "";
-                        if (id === "cpu" || id === "ram") {
-                            const txt = modelData.text || "";
-                            let level = -1;
-                            if (txt.endsWith("%")) {
-                                level = parseFloat(txt) / 100.0;
-                            } else if (txt.indexOf("/") !== -1) {
-                                // RAM: "X.X/YGB"
-                                const slash = txt.indexOf("/");
-                                const used = parseFloat(txt.substring(0, slash));
-                                const total = parseFloat(txt.substring(slash + 1));
-                                if (total > 0)
-                                    level = used / total;
-                            }
-                            if (level >= 0.70)
-                                return "#ff453a";   // red
-                            if (level >= 0.50)
-                                return "#ff9f0a";   // orange
-                            if (level >= 0.30)
-                                return "#ffd60a";   // yellow
-                        }
-                        return "white";
-                    }
+                    // TODO: CPU and RAM always white, no color change based on usage
+                    color: "white"
                 }
             }
         }
