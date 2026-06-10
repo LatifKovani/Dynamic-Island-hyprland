@@ -1,3 +1,4 @@
+//-- TODO: When I log in, tide-island should show like a lock unlocking, like macos style.
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland

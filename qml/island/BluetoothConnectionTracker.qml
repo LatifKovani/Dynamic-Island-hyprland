@@ -21,26 +21,32 @@ Item {
     }
 
     function deviceName(device) {
-        if (!device) return "Bluetooth device";
+        if (!device)
+            return "Bluetooth device";
 
         const preferred = deviceText(device.deviceName);
-        if (preferred.length > 0) return preferred;
+        if (preferred.length > 0)
+            return preferred;
 
         const alias = deviceText(device.name);
-        if (alias.length > 0) return alias;
+        if (alias.length > 0)
+            return alias;
 
         const address = deviceText(device.address);
         return address.length > 0 ? address : "Bluetooth device";
     }
 
     function deviceKey(device) {
-        if (!device) return "";
+        if (!device)
+            return "";
 
         const path = deviceText(device.dbusPath);
-        if (path.length > 0) return path;
+        if (path.length > 0)
+            return path;
 
         const address = deviceText(device.address);
-        if (address.length > 0) return address;
+        if (address.length > 0)
+            return address;
 
         return deviceName(device);
     }
@@ -112,8 +118,26 @@ Item {
         const newDevice = findNewDevice(connected);
         connectedSignature = nextSignature;
 
-        if (showNewConnection && newDevice && nextSignature.length > 0)
-            root.newConnection(newDevice);
+        // FIX: debounce notification — schedule via timer to fire only once
+        // even if multiple signals (onDevicesChanged, onConnectedChanged,
+        // Component.onCompleted) all call sync() in the same event loop tick.
+        if (showNewConnection && newDevice && nextSignature.length > 0) {
+            pendingDevice = newDevice;
+            notifyDebounceTimer.restart();
+        }
+    }
+
+    property var pendingDevice: null
+
+    Timer {
+        id: notifyDebounceTimer
+        interval: 400
+        repeat: false
+        onTriggered: {
+            if (root.pendingDevice)
+                root.newConnection(root.pendingDevice);
+            root.pendingDevice = null;
+        }
     }
 
     onAdapterChanged: {
@@ -123,7 +147,9 @@ Item {
         sync(false);
     }
 
-    onDevicesChanged: sync(true)
+    // FIX: removed onDevicesChanged: sync(true) — device list changes are
+    // already handled by onConnectedChanged inside each delegate, so calling
+    // sync here as well caused duplicate notifications.
 
     Timer {
         id: baselineTimer
@@ -148,9 +174,12 @@ Item {
 
             property var bluetoothDevice: modelData
 
-            Component.onCompleted: root.sync(true)
-            Component.onDestruction: Qt.callLater(function() {
-                root.sync(true);
+            // FIX: removed Component.onCompleted sync(true) — this fired for
+            // every existing device on startup and on every list rebuild,
+            // causing extra notifications alongside onConnectedChanged.
+
+            Component.onDestruction: Qt.callLater(function () {
+                root.sync(false);
             })
 
             Connections {

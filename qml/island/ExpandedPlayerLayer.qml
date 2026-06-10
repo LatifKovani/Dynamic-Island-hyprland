@@ -1,3 +1,8 @@
+//-- TODO: Add a animation to Album art when ExpandedPlayerLayer launches, and when video/music changes also album art should add animation.
+//-- TODO: When i stop a music from spotify Album art should show spotify icon not chrome.
+//-- TODO: When music is playing from spotify, album art in the right bottom corner should show spotify icon.
+//-- TODO: Settings icon should change for an icon of control center like macos icon, if needed to draw, or a nerdfont.
+//-- TODO: Nook should get renamed to Home
 import QtQuick
 import IslandBackend
 import Quickshell.Services.Mpris

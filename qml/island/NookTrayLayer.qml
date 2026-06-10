@@ -1,3 +1,5 @@
+//-- TODO: Trayer rename to Timer and seperate timer with TODO, create another file for TODO so it will be seperate from timer.
+//-- TODO: TODO should have a new design, the box where if you press to mark should remove that, and make when you press over the line, it should make a through line to mark it done, just as it is but without the box.
 import QtQuick
 
 Item {

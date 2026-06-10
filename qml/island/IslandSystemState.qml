@@ -78,6 +78,7 @@ Item {
     onCurrentWorkspaceChanged: syncCustomLeftItems()
     onTimeTextChanged: syncCustomLeftItems()
     onDateTextChanged: syncCustomLeftItems()
+
     Component.onCompleted: {
         const initDirection = (SysBackend.batteryStatus === "Charging" || SysBackend.batteryStatus === "Full") ? "charging" : "discharging";
         root.isCharging = (initDirection === "charging");
@@ -91,7 +92,6 @@ Item {
         SystemServices.setCavaClientActive(systemServicesClientId, false);
     }
 
-    // Read RAM from /proc/meminfo via FileView
     FileView {
         id: memInfoView
         path: "/proc/meminfo"
@@ -171,11 +171,9 @@ Item {
             return [];
         if (Array.isArray(rawItems))
             return rawItems;
-
         const length = Number(rawItems.length);
         if (!isFinite(length) || length < 0)
             return [];
-
         const resolved = [];
         for (let index = 0; index < Math.floor(length); index++)
             resolved.push(rawItems[index]);
@@ -218,7 +216,6 @@ Item {
         const source = listValues(rawItems);
         const resolved = [];
         const seen = {};
-
         for (let index = 0; index < source.length; index++) {
             const itemId = normalizeSwipeItemId(source[index]);
             if (itemId === "" || seen[itemId])
@@ -226,7 +223,6 @@ Item {
             seen[itemId] = true;
             resolved.push(itemId);
         }
-
         return resolved;
     }
 
@@ -418,7 +414,6 @@ Item {
     function buildCustomSwipeItems(itemIds) {
         const source = listValues(itemIds);
         const resolved = [];
-
         for (let index = 0; index < source.length; index++) {
             const itemId = String(source[index] || "");
             if (itemId === "")
@@ -427,19 +422,16 @@ Item {
             if (nextItem)
                 resolved.push(nextItem);
         }
-
         return resolved;
     }
 
     function customSwipeItemsSignature(items) {
         const source = listValues(items);
         let signature = "";
-
         for (let index = 0; index < source.length; index++) {
             const item = source[index] || {};
             signature += String(item.id || "") + "\u001f" + String(item.kind || "") + "\u001f" + String(item.icon || "") + "\u001f" + String(item.iconKind || "") + "\u001f" + String(item.text || "") + "\u001f" + String(item.level === undefined ? "" : item.level) + "\u001f" + String(item.isCharging === undefined ? "" : item.isCharging) + "\u001e";
         }
-
         return signature;
     }
 
@@ -471,16 +463,18 @@ Item {
             }
         }
     }
+
     Timer {
         id: chargeNotificationDebounce
-        interval: 1500
+        interval: 2000
         repeat: false
         property string pendingStatus: ""
         onTriggered: {
-            // Only notify if pendingStatus still differs from committed state
             if (pendingStatus === root._lastChargeStatus)
                 return;
             root._lastChargeStatus = pendingStatus;
+            // Update bolt icon and notification at the same time
+            root.isCharging = (pendingStatus === "charging");
             if (pendingStatus === "charging") {
                 root._lowBatteryNotified = false;
                 root.transientRequested("\uf0e7", -1.0, "Charger connected");
@@ -496,7 +490,6 @@ Item {
         onTriggered: root.transientRequested(root.brightnessStatusIcon(root._pendingBrightnessValue), root._pendingBrightnessValue, "")
     }
 
-    // REPLACE WITH:
     Timer {
         id: systemStatsPollTimer
         interval: 1000
@@ -526,7 +519,6 @@ Item {
                 return;
             if (cpuUsage >= 0)
                 root.currentCpuUsage = root.clamp01(cpuUsage);
-            // ramUsage from backend is always -1 (bug), so we use FileView instead
         }
 
         function onCavaLevelsChanged() {
@@ -554,22 +546,10 @@ Item {
             root.batteryCapacity = capacity;
 
             const direction = (statusString === "Charging" || statusString === "Full") ? "charging" : "discharging";
-            root.isCharging = (direction === "charging");
 
-            if (root._lastChargeStatus !== direction) {
-                const now = Date.now();
-                if (now - root._lastChargeNotificationTime > 3000) {
-                    root._lastChargeNotificationTime = now;
-                    root._lastChargeStatus = direction;
-                    if (direction === "charging") {
-                        root._lowBatteryNotified = false;
-                        root.transientRequested("\uf0e7", -1.0, "Charger connected");
-                    } else {
-                        root.transientRequested("\uf244", -1.0, "Charger disconnected");
-                    }
-                } else {
-                    root._lastChargeStatus = direction;
-                }
+            if (direction !== chargeNotificationDebounce.pendingStatus) {
+                chargeNotificationDebounce.pendingStatus = direction;
+                chargeNotificationDebounce.restart();
             }
 
             if (!root.isCharging && capacity <= 25 && !root._lowBatteryNotified) {
@@ -601,15 +581,12 @@ Item {
         function onRawEvent(event) {
             if (!event)
                 return;
-            // activewindow event format: "class,title"
             if (event.name === "activewindow") {
                 const args = event.parse(2);
                 if (args.length >= 1) {
                     const cls = String(args[0] || "").trim();
-                    if (cls !== "" && cls !== root.currentActiveApp) {
-                        // Store raw class name (lowercase) for resolveApp lookup
+                    if (cls !== "" && cls !== root.currentActiveApp)
                         root.currentActiveApp = cls.toLowerCase();
-                    }
                 }
             }
         }
