@@ -1,8 +1,5 @@
 //-- TODO: Add a animation to Album art when ExpandedPlayerLayer launches, and when video/music changes also album art should add animation.
 //-- TODO: When i stop a music from spotify Album art should show spotify icon not chrome.
-//-- TODO: When music is playing from spotify, album art in the right bottom corner should show spotify icon.
-//-- TODO: Settings icon should change for an icon of control center like macos icon, if needed to draw, or a nerdfont.
-//-- TODO: Nook should get renamed to Home
 import QtQuick
 import IslandBackend
 import Quickshell.Services.Mpris
@@ -43,6 +40,33 @@ Item {
 
     readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
 
+    function triggerArtEntrance() {
+        artWrapper.artScale = 0.82;
+        artWrapper.artOpacity = 0.0;
+        artEntranceAnim.restart();
+    }
+
+    ParallelAnimation {
+        id: artEntranceAnim
+        NumberAnimation {
+            target: artWrapper
+            property: "artScale"
+            from: 0.82
+            to: 1.0
+            duration: 380
+            easing.type: Easing.OutBack
+            easing.overshoot: 0.6
+        }
+        NumberAnimation {
+            target: artWrapper
+            property: "artOpacity"
+            from: 0.0
+            to: 1.0
+            duration: 260
+            easing.type: Easing.OutCubic
+        }
+    }
+
     // Public function to manually refresh artwork (called by parent when becoming visible)
     function refreshArtwork() {
         if (currentArtUrl !== "") {
@@ -61,6 +85,8 @@ Item {
         if (currentArtUrl !== "") {
             artImage.source = "";
             artImage.source = currentArtUrl;
+            if (showCondition)             // ADD — only animate if already visible
+                triggerArtEntrance();
         } else {
             artImage.source = "";
         }
@@ -71,6 +97,8 @@ Item {
         if (showCondition) {
             // Small delay to ensure the component is fully visible
             refreshTimer.start();
+            triggerArtEntrance();          // ADD
+
         }
     }
 
@@ -183,6 +211,8 @@ Item {
             width: 96
             height: 96
             anchors.verticalCenter: parent.verticalCenter
+            property real artScale: 0.82
+            property real artOpacity: 0.0
 
             Rectangle {
                 id: artSource
@@ -191,6 +221,8 @@ Item {
                 visible: false
                 layer.enabled: true
                 layer.smooth: true
+                property real artScale: 0.82
+                property real artOpacity: 0.0
 
                 Image {
                     id: artImage
@@ -237,6 +269,9 @@ Item {
                 anchors.fill: parent
                 source: artSource
                 maskSource: artMask
+                scale: artWrapper.artScale
+                opacity: artWrapper.artOpacity
+                transformOrigin: Item.Center
             }
         }
 

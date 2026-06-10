@@ -1,3 +1,6 @@
+//-- TODO: Remove the red button with, also refresh button replace with an icon of search .
+// -- FIX: Icon themes for apps, are not getting the actual icon theme which i use macos tahoe but using the default of arch. Fix to use macos theme icon, maybe with absolute path or smth.
+//-- TODO: Add a better design when i hover through app launcher, like in the leftside beginning of app name should have for example a vertical line alongside app name just to indicate where it is.
 import QtQuick
 import Quickshell.Io
 

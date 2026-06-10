@@ -1,3 +1,6 @@
+// -- TODO: Wifi and bluetooth when i press them it should not open another window but it should expand like truly dynamic island, both for wifi and bluetooth.
+//-- TODO: Add a Focus button, Night light also and a notification history under the scrolling brightness and sound pills
+//-- TODO: Change battery layout, make it the same as in SwipeCustomLayer.qml
 import QtQuick
 import Quickshell.Bluetooth
 import IslandBackend
@@ -52,9 +55,7 @@ Item {
     property bool batteryDrawerDragging: false
     property real batteryDrawerProgress: 0
     property bool batteryDrawerSettling: false
-    readonly property bool batteryDrawerMoving: batteryDrawerDragging
-        || batteryDrawerSettling
-        || batteryDrawerProgressAnimation.running
+    readonly property bool batteryDrawerMoving: batteryDrawerDragging || batteryDrawerSettling || batteryDrawerProgressAnimation.running
     property bool batteryModeBusy: false
     property bool batteryModeStateRunning: false
     property bool batteryModeSetterRunning: false
@@ -106,10 +107,8 @@ Item {
     readonly property real batteryDrawerHandleHeight: 20
     readonly property real batteryDrawerContentGap: 8
     readonly property real batteryModeCardHeight: 80
-    readonly property real controlCenterExtraHeight: 12 + batteryDrawerHandleHeight
-        + batteryDrawerProgress * (batteryDrawerContentGap + batteryModeCardHeight)
-    readonly property real controlCenterMaximumExtraHeight: 12 + batteryDrawerHandleHeight
-        + batteryDrawerContentGap + batteryModeCardHeight
+    readonly property real controlCenterExtraHeight: 12 + batteryDrawerHandleHeight + batteryDrawerProgress * (batteryDrawerContentGap + batteryModeCardHeight)
+    readonly property real controlCenterMaximumExtraHeight: 12 + batteryDrawerHandleHeight + batteryDrawerContentGap + batteryModeCardHeight
     readonly property bool bluetoothAvailable: !!bluetoothAdapter
     readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
     readonly property var bluetoothDeviceValues: bluetoothAdapter ? bluetoothAdapter.devices.values : []
@@ -120,23 +119,18 @@ Item {
     readonly property bool wifiBusy: wifiController ? wifiController.busy : false
     readonly property bool wifiListRunning: wifiController ? wifiController.scanning : false
     readonly property string wifiCurrentSsid: wifiController ? wifiController.currentSsid : ""
-    readonly property string wifiInfoMessage: wifiLocalInfoMessage.length > 0
-        ? wifiLocalInfoMessage
-        : (wifiController ? wifiController.infoMessage : "")
-    readonly property string wifiError: wifiLocalError.length > 0
-        ? wifiLocalError
-        : (wifiController ? wifiController.errorMessage : "")
+    readonly property string wifiInfoMessage: wifiLocalInfoMessage.length > 0 ? wifiLocalInfoMessage : (wifiController ? wifiController.infoMessage : "")
+    readonly property string wifiError: wifiLocalError.length > 0 ? wifiLocalError : (wifiController ? wifiController.errorMessage : "")
     readonly property string wifiUnsupportedReason: wifiController ? wifiController.unsupportedReason : ""
     readonly property string wifiAvailabilityMessage: {
-        if (wifiUnsupportedReason.length > 0) return wifiUnsupportedReason;
-        if (wifiSupported && !wifiAvailable) return "No Wi-Fi device is available.";
+        if (wifiUnsupportedReason.length > 0)
+            return wifiUnsupportedReason;
+        if (wifiSupported && !wifiAvailable)
+            return "No Wi-Fi device is available.";
         return "";
     }
     readonly property bool bluetoothEnabled: bluetoothAdapter ? bluetoothAdapter.enabled : false
-    readonly property bool bluetoothBusy: bluetoothAdapter
-        ? bluetoothAdapter.state === BluetoothAdapterState.Enabling
-            || bluetoothAdapter.state === BluetoothAdapterState.Disabling
-        : false
+    readonly property bool bluetoothBusy: bluetoothAdapter ? bluetoothAdapter.state === BluetoothAdapterState.Enabling || bluetoothAdapter.state === BluetoothAdapterState.Disabling : false
     readonly property bool bluetoothPairingActive: bluetoothPairingAgent ? bluetoothPairingAgent.requestActive : false
     readonly property bool bluetoothPairingRequiresInput: bluetoothPairingAgent ? bluetoothPairingAgent.requestRequiresInput : false
     readonly property bool bluetoothPairingNumericInput: bluetoothPairingAgent ? bluetoothPairingAgent.requestNumericInput : false
@@ -156,26 +150,33 @@ Item {
     }
 
     function trimString(value) {
-        if (value === undefined || value === null) return "";
+        if (value === undefined || value === null)
+            return "";
         return String(value).trim();
     }
 
     function batteryModeLabel(index) {
-        if (index <= 0) return "Power Saver";
-        if (index >= 2) return "Performance";
+        if (index <= 0)
+            return "Power Saver";
+        if (index >= 2)
+            return "Performance";
         return "Balanced";
     }
 
     function batteryModeCommand(index) {
-        if (index <= 0) return "power-saver";
-        if (index >= 2) return "performance";
+        if (index <= 0)
+            return "power-saver";
+        if (index >= 2)
+            return "performance";
         return "balanced";
     }
 
     function batteryModeIndexForCommand(command) {
         const normalized = trimString(command).toLowerCase();
-        if (normalized === "power-saver" || normalized === "bat") return 0;
-        if (normalized === "performance" || normalized === "ac") return 2;
+        if (normalized === "power-saver" || normalized === "bat")
+            return 0;
+        if (normalized === "performance" || normalized === "ac")
+            return 2;
         return 1;
     }
 
@@ -243,10 +244,14 @@ Item {
     }
 
     function buildBatteryModeStatusText() {
-        if (batteryModeBusy) return "Applying " + batteryModeLabel(batteryModePendingIndex);
-        if (trimString(userConfig.tlpPermissionMode) === "skip") return "TLP disabled";
-        if (!batteryTlpChecked) return "Checking TLP";
-        if (!batteryTlpAvailable) return "TLP is not installed";
+        if (batteryModeBusy)
+            return "Applying " + batteryModeLabel(batteryModePendingIndex);
+        if (trimString(userConfig.tlpPermissionMode) === "skip")
+            return "TLP disabled";
+        if (!batteryTlpChecked)
+            return "Checking TLP";
+        if (!batteryTlpAvailable)
+            return "TLP is not installed";
         return batteryModeLabel(batteryModeIndex);
     }
 
@@ -387,9 +392,7 @@ Item {
 
         const secret = trimString(bluetoothPendingSecretValue);
         if (!secret) {
-            bluetoothError = bluetoothPairingNumericInput
-                ? "Enter the 6-digit passkey first."
-                : "Enter the PIN first.";
+            bluetoothError = bluetoothPairingNumericInput ? "Enter the 6-digit passkey first." : "Enter the PIN first.";
             return;
         }
 
@@ -420,8 +423,10 @@ Item {
     }
 
     function isConnectivityPanelOpen(kind) {
-        if (kind === "wifi") return wifiPanelOpen;
-        if (kind === "bluetooth") return bluetoothPanelOpen;
+        if (kind === "wifi")
+            return wifiPanelOpen;
+        if (kind === "bluetooth")
+            return bluetoothPanelOpen;
         return false;
     }
 
@@ -484,13 +489,16 @@ Item {
     }
 
     function requestWifiStateRefresh() {
-        if (!showCondition || !wifiController) return;
+        if (!showCondition || !wifiController)
+            return;
         wifiController.refreshState();
     }
 
     function requestWifiListRefresh(rescan) {
-        if (!showCondition || !wifiController) return;
-        if (!wifiSupported || !wifiAvailable || !wifiEnabled) return;
+        if (!showCondition || !wifiController)
+            return;
+        if (!wifiSupported || !wifiAvailable || !wifiEnabled)
+            return;
         wifiController.refreshNetworks(!!rescan);
     }
 
@@ -514,7 +522,8 @@ Item {
     }
 
     function connectWifiNetwork(network) {
-        if (!network) return;
+        if (!network)
+            return;
         if (!wifiSupported) {
             wifiLocalError = wifiAvailabilityMessage.length > 0 ? wifiAvailabilityMessage : "Wi-Fi control is unavailable.";
             return;
@@ -527,7 +536,8 @@ Item {
             wifiLocalError = "Turn on Wi-Fi first.";
             return;
         }
-        if (network.connected) return;
+        if (network.connected)
+            return;
 
         const ssid = trimString(network.ssid);
         const networkType = trimString(network.type);
@@ -571,7 +581,8 @@ Item {
 
     function submitWifiPassword() {
         const ssid = trimString(wifiPendingPasswordSsid);
-        if (!ssid) return;
+        if (!ssid)
+            return;
 
         if (trimString(wifiPendingPasswordValue).length === 0) {
             wifiLocalError = "Enter a password first.";
@@ -597,7 +608,8 @@ Item {
 
     function flushBrightness(force) {
         const nextValue = clamp01(pendingBrightness);
-        if (!force && Math.abs(nextValue - lastAppliedBrightness) < 0.01) return;
+        if (!force && Math.abs(nextValue - lastAppliedBrightness) < 0.01)
+            return;
         if (brightnessSetterRunning) {
             brightnessApplyTimer.restart();
             return;
@@ -610,14 +622,16 @@ Item {
 
     function queueBrightness(value) {
         localBrightness = clamp01(value);
-        if (showCondition && !sliderIntroPending) displayedBrightness = localBrightness;
+        if (showCondition && !sliderIntroPending)
+            displayedBrightness = localBrightness;
         pendingBrightness = localBrightness;
         brightnessApplyTimer.restart();
     }
 
     function flushVolume(force) {
         const nextValue = clamp01(pendingVolume);
-        if (!force && Math.abs(nextValue - lastAppliedVolume) < 0.01) return;
+        if (!force && Math.abs(nextValue - lastAppliedVolume) < 0.01)
+            return;
         if (volumeSetterRunning) {
             volumeApplyTimer.restart();
             return;
@@ -630,23 +644,28 @@ Item {
 
     function queueVolume(value) {
         localVolume = clamp01(value);
-        if (showCondition && !sliderIntroPending) displayedVolume = localVolume;
+        if (showCondition && !sliderIntroPending)
+            displayedVolume = localVolume;
         pendingVolume = localVolume;
         volumeApplyTimer.restart();
     }
 
     function syncBrightnessFromLevel(level) {
-        if (level < 0) return;
+        if (level < 0)
+            return;
         localBrightness = clamp01(level);
-        if (showCondition && !sliderIntroPending) displayedBrightness = localBrightness;
+        if (showCondition && !sliderIntroPending)
+            displayedBrightness = localBrightness;
         pendingBrightness = localBrightness;
         lastAppliedBrightness = localBrightness;
     }
 
     function syncVolumeFromLevel(level) {
-        if (level < 0) return;
+        if (level < 0)
+            return;
         localVolume = clamp01(level);
-        if (showCondition && !sliderIntroPending) displayedVolume = localVolume;
+        if (showCondition && !sliderIntroPending)
+            displayedVolume = localVolume;
         pendingVolume = localVolume;
         lastAppliedVolume = localVolume;
     }
@@ -657,20 +676,25 @@ Item {
     }
 
     function bluetoothDeviceName(device) {
-        if (!device) return "Unknown device";
+        if (!device)
+            return "Unknown device";
         const preferred = trimString(device.deviceName);
-        if (preferred.length > 0) return preferred;
+        if (preferred.length > 0)
+            return preferred;
 
         const alias = trimString(device.name);
-        if (alias.length > 0) return alias;
+        if (alias.length > 0)
+            return alias;
 
         const address = trimString(device.address);
         return address.length > 0 ? address : "Unknown device";
     }
 
     function bluetoothDeviceStateText(device) {
-        if (!device) return "";
-        if (device.pairing) return "Pairing";
+        if (!device)
+            return "";
+        if (device.pairing)
+            return "Pairing";
 
         switch (device.state) {
         case BluetoothDeviceState.Connecting:
@@ -683,15 +707,18 @@ Item {
             break;
         }
 
-        if (device.paired || device.bonded) return "Paired";
+        if (device.paired || device.bonded)
+            return "Paired";
         return "Available";
     }
 
     function bluetoothDeviceSubtitle(device) {
         const parts = [];
         const stateLabel = bluetoothDeviceStateText(device);
-        if (stateLabel.length > 0) parts.push(stateLabel);
-        if (device && device.batteryAvailable) parts.push(bluetoothBatteryPercent(device) + "%");
+        if (stateLabel.length > 0)
+            parts.push(stateLabel);
+        if (device && device.batteryAvailable)
+            parts.push(bluetoothBatteryPercent(device) + "%");
         return parts.join(" • ");
     }
 
@@ -704,18 +731,24 @@ Item {
     }
 
     function bluetoothDeviceMatchesSection(device, section) {
-        if (!device) return false;
+        if (!device)
+            return false;
 
         const paired = device.paired || device.bonded;
-        if (section === "connected") return device.connected;
-        if (section === "paired") return !device.connected && paired;
-        if (section === "available") return !paired;
+        if (section === "connected")
+            return device.connected;
+        if (section === "paired")
+            return !device.connected && paired;
+        if (section === "available")
+            return !paired;
         return false;
     }
 
     function buildBluetoothStatusText() {
-        if (!bluetoothAvailable) return "Unavailable";
-        if (!bluetoothEnabled) return "Off";
+        if (!bluetoothAvailable)
+            return "Unavailable";
+        if (!bluetoothEnabled)
+            return "Off";
 
         const devices = bluetoothDeviceValues || [];
         const connectedNames = [];
@@ -726,9 +759,12 @@ Item {
                 connectedNames.push(bluetoothDeviceName(device));
         }
 
-        if (connectedNames.length === 1) return connectedNames[0];
-        if (connectedNames.length > 1) return connectedNames[0] + " +" + (connectedNames.length - 1);
-        if (bluetoothAdapter.discovering) return "Scanning";
+        if (connectedNames.length === 1)
+            return connectedNames[0];
+        if (connectedNames.length > 1)
+            return connectedNames[0] + " +" + (connectedNames.length - 1);
+        if (bluetoothAdapter.discovering)
+            return "Scanning";
         return bluetoothBusy ? "Working..." : "On";
     }
 
@@ -771,7 +807,8 @@ Item {
     }
 
     function handleBluetoothDevicePressed(device) {
-        if (!device) return;
+        if (!device)
+            return;
         if (!bluetoothAdapter || !bluetoothEnabled) {
             bluetoothError = "Turn on Bluetooth first.";
             return;
@@ -797,7 +834,8 @@ Item {
     }
 
     function forgetBluetoothDevice(device) {
-        if (!device) return;
+        if (!device)
+            return;
         if (bluetoothPairAndConnectPath === device.dbusPath)
             bluetoothPairAndConnectPath = "";
         device.forget();
@@ -1017,9 +1055,7 @@ Item {
             if (!controlCenter.bluetoothPairingAgent)
                 return;
 
-            if (!controlCenter.bluetoothPairingAgent.registered
-                    && controlCenter.bluetoothPairingAgent.registrationError.length > 0
-                    && controlCenter.bluetoothPanelOpen) {
+            if (!controlCenter.bluetoothPairingAgent.registered && controlCenter.bluetoothPairingAgent.registrationError.length > 0 && controlCenter.bluetoothPanelOpen) {
                 controlCenter.bluetoothError = controlCenter.bluetoothPairingAgent.registrationError;
             }
         }
@@ -1109,8 +1145,10 @@ Item {
                             radius: 2
                             width: (parent.width - 4) * (batteryCapacity / 100.0)
                             color: {
-                                if (batteryCapacity <= 10) return StyleTokens.danger;
-                                if (batteryCapacity <= 20) return StyleTokens.warning;
+                                if (batteryCapacity <= 10)
+                                    return StyleTokens.danger;
+                                if (batteryCapacity <= 20)
+                                    return StyleTokens.warning;
                                 return StyleTokens.success;
                             }
 
@@ -1400,12 +1438,10 @@ Item {
             id: batteryDrawer
             readonly property real cardWidth: (width - connectivityCardsRow.spacing) / 2
             readonly property real modeSlotWidth: 44
-            readonly property real openDistance: controlCenter.batteryModeCardHeight
-                + controlCenter.batteryDrawerContentGap
+            readonly property real openDistance: controlCenter.batteryModeCardHeight + controlCenter.batteryDrawerContentGap
 
             width: parent.width
-            height: controlCenter.batteryDrawerHandleHeight
-                + controlCenter.batteryDrawerProgress * openDistance
+            height: controlCenter.batteryDrawerHandleHeight + controlCenter.batteryDrawerProgress * openDistance
             clip: true
 
             Rectangle {
@@ -1437,11 +1473,7 @@ Item {
                     anchors.top: parent.top
                     anchors.topMargin: 12
                     width: Math.max(0, parent.width - 88)
-                    text: controlCenter.batteryModeError.length > 0
-                        ? controlCenter.batteryModeError
-                        : (controlCenter.batteryModeInfoMessage.length > 0
-                            ? controlCenter.batteryModeInfoMessage
-                            : controlCenter.batteryModeStatusText)
+                    text: controlCenter.batteryModeError.length > 0 ? controlCenter.batteryModeError : (controlCenter.batteryModeInfoMessage.length > 0 ? controlCenter.batteryModeInfoMessage : controlCenter.batteryModeStatusText)
                     color: controlCenter.batteryModeError.length > 0 ? StyleTokens.error : StyleTokens.textMuted
                     horizontalAlignment: Text.AlignRight
                     font.pixelSize: 9
@@ -1465,10 +1497,7 @@ Item {
                         id: batteryModeItems
                         width: batteryDrawer.modeSlotWidth * 3
                         height: parent.height
-                        x: batteryModeCarousel.width / 2
-                            - batteryDrawer.modeSlotWidth / 2
-                            - controlCenter.batteryModeIndex * batteryDrawer.modeSlotWidth
-                            + controlCenter.batteryModeDragOffset
+                        x: batteryModeCarousel.width / 2 - batteryDrawer.modeSlotWidth / 2 - controlCenter.batteryModeIndex * batteryDrawer.modeSlotWidth + controlCenter.batteryModeDragOffset
 
                         Behavior on x {
                             enabled: !controlCenter.batteryModeSliderDragging
@@ -1554,7 +1583,7 @@ Item {
                             return Math.max(-batteryDrawer.modeSlotWidth, Math.min(batteryDrawer.modeSlotWidth, delta));
                         }
 
-                        onPressed: function(mouse) {
+                        onPressed: function (mouse) {
                             startX = mouse.x;
                             startIndex = controlCenter.batteryModeIndex;
                             moved = false;
@@ -1564,7 +1593,7 @@ Item {
                             controlCenter.batteryModeDragOffset = 0;
                         }
 
-                        onPositionChanged: function(mouse) {
+                        onPositionChanged: function (mouse) {
                             if (!pressed)
                                 return;
 
@@ -1576,7 +1605,7 @@ Item {
                             controlCenter.batteryModeDragOffset = clampDrag(delta);
                         }
 
-                        onReleased: function(mouse) {
+                        onReleased: function (mouse) {
                             const delta = mouse.x - startX;
                             let nextIndex = startIndex;
 
@@ -1656,7 +1685,7 @@ Item {
                         return item.mapToItem(controlCenter, 0, 0).y;
                     }
 
-                    onPressed: function(mouse) {
+                    onPressed: function (mouse) {
                         batteryDrawerSettleTimer.stop();
                         controlCenter.batteryDrawerSettling = false;
                         pointerGrabOffset = pointerY(mouse) - itemTop(batteryDrawerHandle);
@@ -1665,7 +1694,7 @@ Item {
                         controlCenter.batteryDrawerDragging = true;
                     }
 
-                    onPositionChanged: function(mouse) {
+                    onPositionChanged: function (mouse) {
                         const nextHandleY = pointerY(mouse) - pointerGrabOffset - itemTop(batteryDrawer);
                         if (!moved && Math.abs(nextHandleY - batteryDrawerHandle.y) < 4)
                             return;
@@ -1722,7 +1751,7 @@ Item {
                     controlCenter.displayedVolume = controlCenter.localVolume;
                 }
             }
-            onValueMoved: function(value) {
+            onValueMoved: function (value) {
                 controlCenter.queueBrightness(value);
             }
             onCommitRequested: {
@@ -1756,7 +1785,7 @@ Item {
                     controlCenter.displayedVolume = controlCenter.localVolume;
                 }
             }
-            onValueMoved: function(value) {
+            onValueMoved: function (value) {
                 controlCenter.queueVolume(value);
             }
             onCommitRequested: {
@@ -1766,5 +1795,4 @@ Item {
             onCancelRequested: SystemServices.requestVolume()
         }
     }
-
 }
