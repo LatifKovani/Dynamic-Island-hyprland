@@ -367,6 +367,8 @@ PanelWindow {
         property bool osdProgressAnimationEnabled: true
         property string osdCustomText: ""
         property int currentWs: root.currentMonitorWorkspaceId > 0 ? root.currentMonitorWorkspaceId : 1
+        readonly property var controlCenterRef: controlCenterLoader.item
+
         readonly property int batteryCapacity: systemState.batteryCapacity
         readonly property bool isCharging: systemState.isCharging
         readonly property real currentVolume: systemState.currentVolume
@@ -377,6 +379,7 @@ PanelWindow {
         property string notificationAppName: ""
         property string notificationSummary: ""
         property string notificationBody: ""
+        property string notificationImagePath: ""
         property var bluetoothExpandedDevice: null
         readonly property var cavaLevels: systemState.cavaLevels
         property real swipeTransitionProgress: 0
@@ -867,12 +870,42 @@ PanelWindow {
             if (root.overviewVisible || islandState === "control_center" || islandState === "expanded")
                 return;
 
+            function extractBody(raw) {
+                if (!raw)
+                    return "";
+                const parts = raw.split("\n\n");
+                if (parts.length >= 2) {
+                    // Merr gjithçka pas \n\n, hiq domain-et e njohura
+                    const extracted = parts.slice(1).join(" ").trim();
+                    return extracted;
+                }
+                return raw;
+            }
+
             const cleanedAppName = cleanNotificationText(appName);
             const cleanedSummary = cleanNotificationText(summary);
-            const cleanedBody = cleanNotificationText(body);
+            const rawBodyExtracted = extractBody(body);
+            const cleanedBody = cleanNotificationText(rawBodyExtracted);
+            console.log("=== NOTIF DEBUG ===");
+            console.log("appName:", appName);
+            console.log("summary:", summary);
+            console.log("body RAW:", JSON.stringify(body));
+            console.log("rawBodyExtracted:", JSON.stringify(rawBodyExtracted));
+            console.log("cleanedBody:", JSON.stringify(cleanedBody));
+            console.log("cleanedSummary:", JSON.stringify(cleanedSummary));
+            const name = cleanedAppName.toLowerCase();
+            if (name.includes("brave") || name.includes("chromium") || name.includes("chrome")) {
+                notificationImagePath = "/usr/share/icons/hicolor/128x128/apps/brave-desktop.png";
+            } else if (name.includes("firefox")) {
+                notificationImagePath = "/usr/share/icons/hicolor/128x128/apps/firefox.png";
+            } else if (name.includes("telegram")) {
+                notificationImagePath = "/usr/share/icons/hicolor/128x128/apps/telegram.png";
+            } else {
+                notificationImagePath = "";
+            }
+            const resolvedSummary = cleanedSummary !== "" ? cleanedSummary : (cleanedBody !== "" ? cleanedBody : "New notification");
             if (controlCenterLoader.item)
                 controlCenterLoader.item.appendNotification(cleanedAppName !== "" ? cleanedAppName : "Notification", resolvedSummary, cleanedSummary !== "" ? cleanedBody : "");
-            const resolvedSummary = cleanedSummary !== "" ? cleanedSummary : (cleanedBody !== "" ? cleanedBody : "New notification");
 
             abortSideTransientMode();
             clearTransientCapsule();
@@ -1630,6 +1663,7 @@ PanelWindow {
                         summary: islandContainer.notificationSummary
                         body: islandContainer.notificationBody
                         iconText: root.notificationStatusIcon
+                        imagePath: islandContainer.notificationImagePath
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         heroFontFamily: root.heroFontFamily

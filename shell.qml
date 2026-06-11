@@ -174,8 +174,17 @@ Scope {
 
     Connections {
         target: SystemServices
-
         function onNotificationReceived(appName, summary, body) {
+            const windows = panelVariants.instances ? panelVariants.instances : [];
+            for (let i = 0; i < windows.length; i++) {
+                const w = windows[i];
+                if (w && w.islandContainerRef) {
+                    const cc = w.islandContainerRef.controlCenterRef;
+                    if (cc && cc.focusEnabled)
+                        return;
+                    break;
+                }
+            }
             shellRoot.showNotificationAll(appName, summary, body);
         }
     }

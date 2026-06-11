@@ -3,38 +3,33 @@ import IslandBackend
 
 Item {
     id: root
-
     readonly property var userConfig: UserConfig
-
     property bool showCondition: false
     property string appName: ""
     property string summary: ""
     property string body: ""
-    property string iconText: ""
+    property string iconText: ""
+    property string imagePath: ""          // <- E RE: path i ikonës
     property var configSource: null
     readonly property var activeConfig: configSource || userConfig
     property string iconFontFamily: activeConfig.iconFontFamily
     property string textFontFamily: activeConfig.textFontFamily
     property string heroFontFamily: activeConfig.heroFontFamily
 
-    readonly property string contentText: {
-        if (summary !== "" && body !== "" && body !== summary) return summary + "  " + body;
-        if (summary !== "") return summary;
-        if (body !== "") return body;
-        return "New notification";
-    }
+    readonly property string titleText: summary !== "" ? summary : "New notification"
+    readonly property string bodyText: (body !== "" && body !== summary) ? body : ""
+    readonly property bool hasTwoLines: bodyText !== ""
+    readonly property bool useImageIcon: imagePath !== ""
+
     readonly property real minimumWidth: 272
-    readonly property real maximumWidth: 400
-    readonly property real iconSlotWidth: 18
-    readonly property real contentSpacing: 13
-    readonly property real horizontalPadding: 16
-    readonly property real verticalPadding: 7
-    readonly property real textBlockWidthAtMaximum: maximumWidth - horizontalPadding * 2 - iconSlotWidth - contentSpacing
-    readonly property bool prefersWrappedContent: contentMetrics.advanceWidth > textBlockWidthAtMaximum
-    readonly property real preferredWidth: prefersWrappedContent
-        ? maximumWidth
-        : Math.max(minimumWidth, Math.min(maximumWidth, contentMetrics.advanceWidth + iconSlotWidth + contentSpacing + horizontalPadding * 2))
-    readonly property real preferredHeight: prefersWrappedContent ? 68 : 56
+    readonly property real maximumWidth: 420
+    readonly property real iconSlotWidth: 28
+    readonly property real contentSpacing: 10
+    readonly property real horizontalPadding: 14
+    readonly property real verticalPadding: 8
+
+    readonly property real preferredWidth: hasTwoLines ? maximumWidth : Math.max(minimumWidth, maximumWidth * 0.78)
+    readonly property real preferredHeight: hasTwoLines ? 68 : 56
 
     anchors.fill: parent
     anchors.margins: 0
@@ -47,14 +42,6 @@ Item {
         }
     }
 
-    TextMetrics {
-        id: contentMetrics
-        font.family: textFontFamily
-        font.pixelSize: 16
-        font.weight: Font.DemiBold
-        text: contentText
-    }
-
     Row {
         anchors.fill: parent
         anchors.leftMargin: horizontalPadding
@@ -62,36 +49,68 @@ Item {
         anchors.topMargin: verticalPadding
         anchors.bottomMargin: verticalPadding
         spacing: contentSpacing
-        anchors.verticalCenter: parent.verticalCenter
 
-        Text {
+        // --- IKONA ---
+        Item {
             width: iconSlotWidth
+            height: iconSlotWidth
             anchors.verticalCenter: parent.verticalCenter
-            text: iconText
-            color: "#f4f5f7"
-            font.pixelSize: 18
-            font.family: iconFontFamily
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
+
+            // Logo PNG (Brave, Firefox, etj.)
+            Image {
+                id: appIcon
+                anchors.fill: parent
+                source: useImageIcon ? imagePath : ""
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                visible: useImageIcon && status === Image.Ready
+            }
+
+            // Fallback: font icon
+            Text {
+                anchors.fill: parent
+                visible: !useImageIcon || appIcon.status !== Image.Ready
+                text: iconText
+                color: "#f4f5f7"
+                font.pixelSize: 18
+                font.family: iconFontFamily
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
         }
 
-        Item {
+        // --- TEKSTI ---
+        Column {
             width: parent.width - iconSlotWidth - contentSpacing
-            height: parent.height
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
 
+            // Rreshti 1: Summary — emri dërguesit
             Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: contentText
+                width: parent.width
+                text: titleText
                 color: "white"
-                font.pixelSize: 16
+                font.pixelSize: hasTwoLines ? 13 : 15
                 font.family: textFontFamily
                 font.weight: Font.DemiBold
                 font.letterSpacing: -0.15
-                width: parent.width
-                wrapMode: prefersWrappedContent ? Text.WordWrap : Text.NoWrap
-                maximumLineCount: prefersWrappedContent ? 2 : 1
                 elide: Text.ElideRight
-                lineHeight: 0.95
+                maximumLineCount: 1
+            }
+
+            // Rreshti 2: Body — pjesa e mesazhit
+            Text {
+                width: parent.width
+                visible: hasTwoLines
+                height: hasTwoLines ? implicitHeight : 0
+                text: bodyText
+                color: "#b0b4ba"
+                font.pixelSize: 12
+                font.family: textFontFamily
+                font.weight: Font.Normal
+                font.letterSpacing: -0.1
+                elide: Text.ElideRight
+                maximumLineCount: 1
             }
         }
     }
