@@ -870,6 +870,8 @@ PanelWindow {
             const cleanedAppName = cleanNotificationText(appName);
             const cleanedSummary = cleanNotificationText(summary);
             const cleanedBody = cleanNotificationText(body);
+            if (controlCenterLoader.item)
+                controlCenterLoader.item.appendNotification(cleanedAppName !== "" ? cleanedAppName : "Notification", resolvedSummary, cleanedSummary !== "" ? cleanedBody : "");
             const resolvedSummary = cleanedSummary !== "" ? cleanedSummary : (cleanedBody !== "" ? cleanedBody : "New notification");
 
             abortSideTransientMode();
@@ -1694,6 +1696,10 @@ PanelWindow {
                 active: islandContainer.controlCenterLayerVisible || root.anyConnectivityDetailMounted
                 asynchronous: false
                 visible: active
+                onLoaded: {
+                    if (item)
+                        item.requestNotification.connect(islandContainer.showNotificationCapsule);
+                }
 
                 sourceComponent: Component {
                     ControlCenterLayer {
@@ -1711,9 +1717,6 @@ PanelWindow {
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
                         showCondition: islandContainer.controlCenterLayerVisible
-                        onConnectivityPanelRequested: function (kind, open) {
-                            root.setConnectivityDetailVisible(kind, open);
-                        }
                     }
                 }
             }
