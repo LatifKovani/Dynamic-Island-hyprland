@@ -1,9 +1,8 @@
-//-- TODO: Add a animation to Album art when ExpandedPlayerLayer launches, and when video/music changes also album art should add animation.
 //-- TODO: When i stop a music from spotify Album art should show spotify icon not chrome.
 import QtQuick
+import Quickshell.Widgets
 import IslandBackend
 import Quickshell.Services.Mpris
-import Qt5Compat.GraphicalEffects
 
 Item {
     id: root
@@ -25,10 +24,15 @@ Item {
     property string textFontFamily: userConfig.textFontFamily
     property real visualizerPhase: 0
 
-    // ── Album art retry state with exponential backoff ──
+    // ── Retry state ──
     property int artRetryCount: 0
     property int artMaxRetries: 10
-    property bool _forceRefresh: false
+
+    // ── Crossfade state ──
+    // _displayedSource: what's actually painted on screen right now (never set to "" mid-session)
+    // _loadingSource:   the URL currently being fetched into artLoader
+    property string _displayedSource: ""
+    property string _loadingSource: ""
 
     readonly property var _now: new Date()
     readonly property int _todayDay: _now.getDate()
@@ -40,17 +44,75 @@ Item {
 
     readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
 
-    function triggerArtEntrance() {
-        artWrapper.artScale = 0.82;
-        artWrapper.artOpacity = 0.0;
-        artEntranceAnim.restart();
+    // ── Start loading a new URL (silently, into artLoader) ──
+    function loadArt(url) {
+        if (url === "" || url === _loadingSource || url === _displayedSource)
+            return;
+        artRetryCount = 0;
+        artRetryTimer.stop();
+        _loadingSource = url;
     }
 
+    // ── Called when artLoader finishes — swap displayed source ──
+    function _commitArt() {
+        var wasEmpty = (_displayedSource === "");
+
+        if (wasEmpty) {
+            _displayedSource = _loadingSource;
+            if (showCondition)
+                artEntranceAnim.restart();
+            // else: will fire when showCondition becomes true
+        } else {
+            // Track change — flip animation. Don't swap _displayedSource yet;
+            // artFlipAnim swaps it at the midpoint while the card is edge-on.
+            _pendingArtSource = _loadingSource;
+            artFlipAnim.restart();
+        }
+    }
+
+    onCurrentArtUrlChanged: {
+        artRetryCount = 0;
+        artRetryTimer.stop();
+        if (currentArtUrl !== "")
+            loadArt(currentArtUrl);
+        // If URL cleared (player stopped), leave _displayedSource as-is
+        // so we don't flash gray — keeps last art showing
+    }
+
+    onShowConditionChanged: {
+        if (showCondition) {
+            if (_displayedSource !== "") {
+                // Art already ready — animate in
+                artEntranceAnim.restart();
+            } else if (currentArtUrl !== "") {
+                // Art not yet loaded — kick off load, entrance fires in _commitArt
+                loadArt(currentArtUrl);
+            }
+            // If no art at all yet, artWrapper stays hidden (opacity 0) — no gray flash
+        }
+    }
+
+    Timer {
+        id: artRetryTimer
+        repeat: true
+        interval: Math.min(1000 * Math.pow(1.5, artRetryCount), 8000)
+        onTriggered: {
+            if (currentArtUrl !== "" && _displayedSource !== currentArtUrl && artRetryCount < artMaxRetries) {
+                artRetryCount++;
+                _loadingSource = "";
+                _loadingSource = currentArtUrl;
+            } else {
+                artRetryTimer.stop();
+            }
+        }
+    }
+
+    // ── Entrance: spring pop when art becomes visible for the first time ──
     ParallelAnimation {
         id: artEntranceAnim
         NumberAnimation {
             target: artWrapper
-            property: "artScale"
+            property: "scale"
             from: 0.82
             to: 1.0
             duration: 380
@@ -59,7 +121,7 @@ Item {
         }
         NumberAnimation {
             target: artWrapper
-            property: "artOpacity"
+            property: "opacity"
             from: 0.0
             to: 1.0
             duration: 260
@@ -67,66 +129,38 @@ Item {
         }
     }
 
-    // Public function to manually refresh artwork (called by parent when becoming visible)
-    function refreshArtwork() {
-        if (currentArtUrl !== "") {
-            artRetryCount = 0;
-            artRetryTimer.stop();
-            var url = currentArtUrl;
-            artImage.source = "";
-            artImage.source = url;
+    // ── Track change: Y-axis card flip ──
+    // Phase 1: rotate 0→90  (flip out, card goes edge-on and invisible)
+    // Midpoint: swap _displayedSource while the card is edge-on (artSingle's
+    // source binding picks this up automatically — no direct id reference needed)
+    // Phase 2: rotate -90→0 (flip in, new art comes in from the other side)
+    property real _flipAngle: 0.0
+    property string _pendingArtSource: ""
+
+    SequentialAnimation {
+        id: artFlipAnim
+
+        NumberAnimation {
+            target: root
+            property: "_flipAngle"
+            from: 0.0
+            to: 90.0
+            duration: 160
+            easing.type: Easing.InCubic
         }
-    }
-
-    // On URL change: reset retry state and load
-    onCurrentArtUrlChanged: {
-        artRetryCount = 0;
-        artRetryTimer.stop();
-        if (currentArtUrl !== "") {
-            artImage.source = "";
-            artImage.source = currentArtUrl;
-            if (showCondition)             // ADD — only animate if already visible
-                triggerArtEntrance();
-        } else {
-            artImage.source = "";
-        }
-    }
-
-    // When becoming visible, refresh artwork if needed
-    onShowConditionChanged: {
-        if (showCondition) {
-            // Small delay to ensure the component is fully visible
-            refreshTimer.start();
-            triggerArtEntrance();          // ADD
-
-        }
-    }
-
-    Timer {
-        id: refreshTimer
-        interval: 50
-        repeat: false
-        onTriggered: {
-            if (showCondition && currentArtUrl !== "" && artImage.status !== Image.Ready) {
-                refreshArtwork();
+        ScriptAction {
+            script: {
+                root._displayedSource = root._pendingArtSource;
+                root._flipAngle = -90.0;
             }
         }
-    }
-
-    // Exponential backoff retry timer
-    Timer {
-        id: artRetryTimer
-        repeat: true
-        interval: Math.min(1000 * Math.pow(1.5, artRetryCount), 8000)
-        onTriggered: {
-            if (currentArtUrl !== "" && artImage.status !== Image.Ready && artRetryCount < artMaxRetries) {
-                artRetryCount++;
-                console.log("Retrying album art load attempt", artRetryCount, "interval:", interval);
-                artImage.source = "";
-                artImage.source = currentArtUrl;
-            } else if (artImage.status === Image.Ready || artRetryCount >= artMaxRetries) {
-                artRetryTimer.stop();
-            }
+        NumberAnimation {
+            target: root
+            property: "_flipAngle"
+            from: -90.0
+            to: 0.0
+            duration: 160
+            easing.type: Easing.OutCubic
         }
     }
 
@@ -157,7 +191,6 @@ Item {
         return [0.34, 0.58, 0.82, 0.58, 0.34][index] || 0.4;
     }
 
-    // Microseconds → "m:ss"  (MPRIS2 native unit)
     function formatUs(us) {
         const s = Math.max(0, Math.floor(us / 1000000));
         return Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
@@ -201,77 +234,85 @@ Item {
         }
     }
 
+    // ── Hidden loader — fetches art without showing gray ──
+    // Sits outside the visible tree so ClippingRectangle never renders it
+    Image {
+        id: artLoader
+        visible: false
+        width: 0
+        height: 0
+        source: root._loadingSource
+        sourceSize: Qt.size(192, 192)
+        cache: false
+        asynchronous: true
+
+        onStatusChanged: {
+            if (status === Image.Ready) {
+                root.artRetryCount = 0;
+                artRetryTimer.stop();
+                root._commitArt();
+            } else if (status === Image.Error) {
+                if (root.artRetryCount < root.artMaxRetries && !artRetryTimer.running)
+                    artRetryTimer.restart();
+            }
+        }
+    }
+
     Row {
         anchors.fill: parent
         spacing: 10
 
         // ── Album art ────────────────────────────────────────────────
+        // opacity starts at 0 and only animates in once _displayedSource is set
+        // so the gray ClippingRectangle background is NEVER visible
         Item {
             id: artWrapper
             width: 96
             height: 96
             anchors.verticalCenter: parent.verticalCenter
-            property real artScale: 0.82
-            property real artOpacity: 0.0
+            opacity: 0.0      // controlled entirely by artEntranceAnim
+            scale: 1.0
+            transformOrigin: Item.Center
 
-            Rectangle {
-                id: artSource
+            ClippingRectangle {
+                id: artCard
                 anchors.fill: parent
+                radius: 18
                 color: "#2c2c2e"
-                visible: false
-                layer.enabled: true
-                layer.smooth: true
-                property real artScale: 0.82
-                property real artOpacity: 0.0
+
+                // Y-axis flip on track change. QtQuick's 3D Rotation transform
+                // applies perspective foreshortening automatically.
+                transform: Rotation {
+                    origin.x: artCard.width / 2
+                    origin.y: artCard.height / 2
+                    axis {
+                        x: 0
+                        y: 1
+                        z: 0
+                    }
+                    angle: root._flipAngle
+                }
 
                 Image {
-                    id: artImage
+                    id: artSingle
                     anchors.fill: parent
                     fillMode: Image.PreserveAspectCrop
-                    visible: source.toString() !== ""
+                    source: root._displayedSource
                     sourceSize: Qt.size(192, 192)
                     smooth: true
                     mipmap: true
                     cache: false
-
-                    onStatusChanged: {
-                        if (status === Image.Error && source.toString() !== "" && root.artRetryCount < root.artMaxRetries) {
-                            if (!artRetryTimer.running) {
-                                artRetryTimer.restart();
-                            }
-                        } else if (status === Image.Ready) {
-                            root.artRetryCount = 0;
-                            artRetryTimer.stop();
-                        }
-                    }
                 }
 
+                // Music note — only when nothing has ever loaded
                 Text {
                     anchors.centerIn: parent
-                    visible: currentArtUrl === "" || (artImage.status !== Image.Ready && artImage.status !== Image.Loading)
+                    visible: root._displayedSource === ""
                     text: "\uf001"
                     font.family: iconFontFamily
                     font.pixelSize: 24
                     color: Qt.rgba(1, 1, 1, 0.2)
                 }
-            }
-
-            Rectangle {
-                id: artMask
-                anchors.fill: parent
-                radius: 30
-                color: "white"
-                visible: false
-                layer.enabled: true
-            }
-
-            OpacityMask {
-                anchors.fill: parent
-                source: artSource
-                maskSource: artMask
-                scale: artWrapper.artScale
-                opacity: artWrapper.artOpacity
-                transformOrigin: Item.Center
             }
         }
 
@@ -281,7 +322,6 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
 
-            // Track name + visualizer
             Row {
                 width: parent.width
                 spacing: 6
