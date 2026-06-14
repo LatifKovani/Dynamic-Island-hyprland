@@ -43,6 +43,16 @@ Item {
     readonly property var _fullDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
     readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
+    Component.onCompleted: {
+        if (preloadedArtSource !== "") {
+            _displayedSource = preloadedArtSource;
+            // Don't animate on first load — just show it instantly
+            artWrapper.opacity = 1.0;
+            artWrapper.scale = 1.0;
+        } else if (currentArtUrl !== "") {
+            loadArt(currentArtUrl);
+        }
+    }
 
     // ── Start loading a new URL (silently, into artLoader) ──
     function loadArt(url) {
@@ -82,13 +92,14 @@ Item {
     onShowConditionChanged: {
         if (showCondition) {
             if (_displayedSource !== "") {
-                // Art already ready — animate in
                 artEntranceAnim.restart();
+            } else if (preloadedArtSource !== "") {
+                _displayedSource = preloadedArtSource;
+                artWrapper.opacity = 1.0;
+                artWrapper.scale = 1.0;
             } else if (currentArtUrl !== "") {
-                // Art not yet loaded — kick off load, entrance fires in _commitArt
                 loadArt(currentArtUrl);
             }
-            // If no art at all yet, artWrapper stays hidden (opacity 0) — no gray flash
         }
     }
 
@@ -243,7 +254,7 @@ Item {
         height: 0
         source: root._loadingSource
         sourceSize: Qt.size(192, 192)
-        cache: false
+        cache: true
         asynchronous: true
 
         onStatusChanged: {
@@ -262,15 +273,12 @@ Item {
         anchors.fill: parent
         spacing: 10
 
-        // ── Album art ────────────────────────────────────────────────
-        // opacity starts at 0 and only animates in once _displayedSource is set
-        // so the gray ClippingRectangle background is NEVER visible
         Item {
             id: artWrapper
             width: 96
             height: 96
             anchors.verticalCenter: parent.verticalCenter
-            opacity: 0.0      // controlled entirely by artEntranceAnim
+            opacity: 0.0
             scale: 1.0
             transformOrigin: Item.Center
 

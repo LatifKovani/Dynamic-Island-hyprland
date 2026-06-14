@@ -155,11 +155,19 @@ Item {
                         readonly property real level: Math.max(0, Math.min(100, Number(modelData.level || 0)))
                         readonly property bool charging: modelData.isCharging || false
                         readonly property color bodyColor: {
+                            if (charging)
+                                return "white";
                             if (level <= 20)
                                 return "#ff3b30";
                             return "white";
                         }
-                        readonly property color emptyColor: Qt.rgba(1, 1, 1, 0.56)
+                        readonly property color emptyColor: {
+                            if (charging)
+                                return Qt.rgba(1, 1, 1, 0.56);
+                            if (level <= 20)
+                                return Qt.rgba(1, 0.23, 0.19, 0.3);
+                            return Qt.rgba(1, 1, 1, 0.56);
+                        }
 
                         Rectangle {
                             id: batteryBody

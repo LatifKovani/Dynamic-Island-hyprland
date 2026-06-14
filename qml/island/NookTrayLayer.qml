@@ -1,5 +1,3 @@
-//-- TODO: Trayer rename to Timer and seperate timer with TODO, create another file for TODO so it will be seperate from timer.
-//-- TODO: TODO should have a new design, the box where if you press to mark should remove that, and make when you press over the line, it should make a through line to mark it done, just as it is but without the box.
 import QtQuick
 
 Item {
@@ -7,6 +5,7 @@ Item {
 
     signal controlPressed
     signal settingsPressed
+    signal pomodoroFinished(string summary, string body)
 
     property bool showCondition: false
 
@@ -23,6 +22,29 @@ Item {
 
     property string activeTab: "nook"
 
+    property int pomodoroTotal: 25 * 60
+    property int pomodoroRemaining: 25 * 60
+    property bool pomodoroRunning: false
+    property string pomodoroMode: "focus"
+    property int sessionsCompleted: 0
+
+    Timer {
+        id: pomodoroCountdown
+        interval: 1000
+        repeat: true
+        running: root.pomodoroRunning
+        onTriggered: {
+            if (root.pomodoroRemaining > 0) {
+                root.pomodoroRemaining--;
+            } else {
+                root.pomodoroRunning = false;
+                if (root.pomodoroMode === "focus")
+                    root.sessionsCompleted++;
+                root.pomodoroFinished(root.pomodoroMode === "focus" ? "⏱ Focus Complete" : "⏱ Break Complete", root.pomodoroMode === "focus" ? "Time for a break!" : "Back to work!");
+            }
+        }
+    }
+
     anchors.fill: parent
     opacity: showCondition ? 1 : 0
 
@@ -33,16 +55,11 @@ Item {
         }
     }
 
-    // Always return to the media player tab when the expanded player opens.
-    // Without this, keepAlive keeps the component alive between sessions, so
-    // a leftover "tray" activeTab would make ExpandedPlayerLayer.showCondition
-    // stay false — skipping the album-art retry that fires on showConditionChanged.
     onShowConditionChanged: {
         if (showCondition)
             activeTab = "nook";
     }
 
-    // ── Tab bar ───────────────────────────────────────────────────
     Row {
         id: tabBar
         anchors.top: parent.top
@@ -52,6 +69,7 @@ Item {
         anchors.leftMargin: 14
         anchors.rightMargin: 14
         height: 22
+        spacing: 6
 
         Rectangle {
             id: nookTab
@@ -69,7 +87,6 @@ Item {
                 id: nookInner
                 anchors.centerIn: parent
                 spacing: 5
-
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "\uf001"
@@ -82,7 +99,6 @@ Item {
                         }
                     }
                 }
-
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Nook"
@@ -97,28 +113,20 @@ Item {
                     }
                 }
             }
-
             MouseArea {
                 anchors.fill: parent
                 preventStealing: true
-                onPressed: {
-                    root.controlPressed();
-                }
+                onPressed: root.controlPressed()
                 onClicked: root.activeTab = "nook"
             }
         }
 
-        Item {
-            width: 6
-            height: 1
-        }
-
         Rectangle {
-            id: trayTab
+            id: todoTab
             height: 22
-            width: trayInner.implicitWidth + 18
+            width: todoInner.implicitWidth + 18
             radius: 11
-            color: activeTab === "tray" ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
+            color: activeTab === "todo" ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
             Behavior on color {
                 ColorAnimation {
                     duration: 150
@@ -126,30 +134,28 @@ Item {
             }
 
             Row {
-                id: trayInner
+                id: todoInner
                 anchors.centerIn: parent
                 spacing: 5
-
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "\uf0ae"
                     font.family: root.iconFontFamily
                     font.pixelSize: 10
-                    color: activeTab === "tray" ? "white" : Qt.rgba(1, 1, 1, 0.36)
+                    color: activeTab === "todo" ? "white" : Qt.rgba(1, 1, 1, 0.36)
                     Behavior on color {
                         ColorAnimation {
                             duration: 150
                         }
                     }
                 }
-
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Tray"
+                    text: "Todo"
                     font.family: root.textFontFamily
                     font.pixelSize: 11
-                    font.weight: activeTab === "tray" ? Font.SemiBold : Font.Regular
-                    color: activeTab === "tray" ? "white" : Qt.rgba(1, 1, 1, 0.36)
+                    font.weight: activeTab === "todo" ? Font.SemiBold : Font.Regular
+                    color: activeTab === "todo" ? "white" : Qt.rgba(1, 1, 1, 0.36)
                     Behavior on color {
                         ColorAnimation {
                             duration: 150
@@ -157,19 +163,66 @@ Item {
                     }
                 }
             }
-
             MouseArea {
                 anchors.fill: parent
                 preventStealing: true
-                onPressed: {
-                    root.controlPressed();
+                onPressed: root.controlPressed()
+                onClicked: root.activeTab = "todo"
+            }
+        }
+
+        Rectangle {
+            id: timerTab
+            height: 22
+            width: timerInner.implicitWidth + 18
+            radius: 11
+            color: activeTab === "timer" ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
+            Behavior on color {
+                ColorAnimation {
+                    duration: 150
                 }
-                onClicked: root.activeTab = "tray"
+            }
+
+            Row {
+                id: timerInner
+                anchors.centerIn: parent
+                spacing: 5
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "\uf017"
+                    font.family: root.iconFontFamily
+                    font.pixelSize: 10
+                    color: activeTab === "timer" ? "white" : Qt.rgba(1, 1, 1, 0.36)
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 150
+                        }
+                    }
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Timer"
+                    font.family: root.textFontFamily
+                    font.pixelSize: 11
+                    font.weight: activeTab === "timer" ? Font.SemiBold : Font.Regular
+                    color: activeTab === "timer" ? "white" : Qt.rgba(1, 1, 1, 0.36)
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 150
+                        }
+                    }
+                }
+            }
+            MouseArea {
+                anchors.fill: parent
+                preventStealing: true
+                onPressed: root.controlPressed()
+                onClicked: root.activeTab = "timer"
             }
         }
 
         Item {
-            width: tabBar.width - nookTab.width - 6 - trayTab.width - gearIcon.contentWidth - 28 - 14 - 14
+            width: tabBar.width - nookTab.width - todoTab.width - timerTab.width - tabBar.spacing * 3 - gearIcon.contentWidth - 8
             height: 1
         }
 
@@ -185,18 +238,13 @@ Item {
                     duration: 100
                 }
             }
-
             MouseArea {
                 id: gearMouse
                 anchors.fill: parent
                 anchors.margins: -8
                 preventStealing: true
-                onPressed: {
-                    root.controlPressed();
-                }
-                onClicked: {
-                    root.settingsPressed();
-                }
+                onPressed: root.controlPressed()
+                onClicked: root.settingsPressed()
             }
         }
     }
@@ -212,7 +260,6 @@ Item {
         color: Qt.rgba(1, 1, 1, 0.06)
     }
 
-    // ── Content area ──────────────────────────────────────────────
     Item {
         anchors.top: tabBar.bottom
         anchors.left: parent.left
@@ -220,14 +267,6 @@ Item {
         anchors.bottom: parent.bottom
         anchors.topMargin: 5
 
-        // ── NOOK: media player ─────────────────────────────────────
-        // enabled: false when the tray tab is active.
-        // Both layers use anchors.fill so they fully overlap.
-        // TrayLayer is declared second (higher z-order) and was
-        // intercepting ALL mouse events — including the ListView/Flickable
-        // grabbing presses to detect flick gestures — even at opacity 0.
-        // Setting enabled: activeTab === "nook/tray" stops whichever layer
-        // is invisible from consuming input meant for the other.
         ExpandedPlayerLayer {
             anchors.fill: parent
             enabled: root.activeTab === "nook"
@@ -245,13 +284,40 @@ Item {
             onControlPressed: root.controlPressed()
         }
 
-        // ── TRAY: todo list + pomodoro ─────────────────────────────
-        TrayLayer {
+        TodoLayer {
             anchors.fill: parent
-            enabled: root.activeTab === "tray"
-            showCondition: root.activeTab === "tray" && root.showCondition
+            enabled: root.activeTab === "todo"
+            showCondition: root.activeTab === "todo" && root.showCondition
             iconFontFamily: root.iconFontFamily
             textFontFamily: root.textFontFamily
+        }
+
+        // PomodoroLayer receives state from parent — no timer inside it
+        PomodoroLayer {
+            anchors.fill: parent
+            enabled: root.activeTab === "timer"
+            showCondition: root.activeTab === "timer" && root.showCondition
+            iconFontFamily: root.iconFontFamily
+            textFontFamily: root.textFontFamily
+
+            // Pass state down
+            pomodoroTotal: root.pomodoroTotal
+            pomodoroRemaining: root.pomodoroRemaining
+            pomodoroRunning: root.pomodoroRunning
+            pomodoroMode: root.pomodoroMode
+            sessionsCompleted: root.sessionsCompleted
+
+            // Receive changes back up
+            onRequestSetRunning: root.pomodoroRunning = running
+            onRequestSetMode: {
+                root.pomodoroMode = mode;
+                root.pomodoroTotal = total;
+                root.pomodoroRemaining = total;
+            }
+            onRequestReset: {
+                root.pomodoroRunning = false;
+                root.pomodoroRemaining = root.pomodoroTotal;
+            }
         }
     }
 }
