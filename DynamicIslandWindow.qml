@@ -490,9 +490,14 @@ PanelWindow {
             dateText: timeObj.currentDateLabel
             currentWorkspace: islandContainer.currentWs
             customSwipeActive: customSwipeLoader.active
-
-            onTransientRequested: function (icon, progress, text) {
+        }
+        Connections {
+            target: systemState
+            function onTransientRequested(icon, progress, text) {
                 islandContainer.showTransientCapsule(icon, progress, text);
+            }
+            function onCriticalBatteryRequested(icon, progress, text) {
+                islandContainer.showCriticalBatteryNotification(icon, progress, text);
             }
         }
 
@@ -666,6 +671,22 @@ PanelWindow {
             default:
                 return "none";
             }
+        }
+        function showCriticalBatteryNotification(icon, progress, text) {
+            if (root.overviewVisible)
+                return;
+            // If already pinned, just update the text in place
+            if (islandState === "notification" && notificationAppName === "Battery") {
+                notificationSummary = text;
+                return;
+            }
+            abortSideTransientMode();
+            clearTransientCapsule();
+            notificationAppName = "Battery";
+            notificationSummary = text;
+            notificationBody = "";
+            islandState = "notification";
+            stopAutoHideTimer();
         }
 
         function setOsdProgress(nextProgress, animate) {

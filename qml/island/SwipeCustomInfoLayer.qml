@@ -128,7 +128,6 @@ Item {
                     anchors.leftMargin: 0
                     anchors.verticalCenter: parent.verticalCenter
 
-                    // System theme icon
                     Image {
                         anchors.centerIn: parent
                         visible: parent.parent.isThemeIcon && !parent.parent.isBattery
@@ -139,16 +138,13 @@ Item {
                         smooth: true
                     }
 
-                    // Nerd Font glyph icon
                     Text {
                         anchors.centerIn: parent
                         visible: parent.parent.isGlyphIcon && !parent.parent.isBattery
                         text: parent.parent.isGlyphIcon ? (modelData.icon || "") : ""
-                        // TODO: CPU/RAM icon color stays white always
                         color: "white"
                     }
 
-                    // ── iOS 27-style battery shape ────────────────────────────────
                     Item {
                         id: batteryShape
                         visible: parent.parent.isBattery
@@ -163,7 +159,7 @@ Item {
                                 return "#ff3b30";
                             return "white";
                         }
-                        readonly property color emptyColor: Qt.rgba(1, 1, 1, 0.45)
+                        readonly property color emptyColor: Qt.rgba(1, 1, 1, 0.56)
 
                         Rectangle {
                             id: batteryBody
@@ -176,8 +172,6 @@ Item {
                             border.width: 0
                             clip: true
 
-                            // FIX: battery fill — when level is 100% right edge is rounded,
-                            // otherwise a flat rectangle covers the right rounded corner.
                             Rectangle {
                                 id: batteryFill
                                 anchors.top: parent.top
@@ -187,13 +181,12 @@ Item {
                                 width: batteryShape.charging ? parent.width : Math.max(root.batteryOuterRadius * 2, parent.width * (batteryShape.level / 100.0))
                                 color: batteryShape.bodyColor
 
-                                // Flat right edge only when not full and not charging
                                 Rectangle {
                                     visible: !batteryShape.charging && batteryShape.level < 100
                                     anchors.top: parent.top
                                     anchors.bottom: parent.bottom
                                     anchors.right: parent.right
-                                    width: root.batteryOuterRadius
+                                    width: root.batteryOuterRadius * Math.min(1, (100 - batteryShape.level) / 10.0)
                                     color: parent.color
                                 }
 
@@ -210,7 +203,6 @@ Item {
                                 }
                             }
 
-                            // Number + bolt (charging)
                             Row {
                                 visible: batteryShape.charging
                                 anchors.centerIn: parent
@@ -239,7 +231,6 @@ Item {
                                 }
                             }
 
-                            // Number (discharging)
                             Text {
                                 visible: !batteryShape.charging
                                 anchors.centerIn: parent
@@ -254,7 +245,6 @@ Item {
                             }
                         }
 
-                        // Tip nub — white when full
                         Rectangle {
                             width: root.batteryTipWidth
                             height: root.batteryTipHeight
@@ -282,7 +272,6 @@ Item {
                     text: modelData.text || ""
                     font.pixelSize: root.textPixelSize
                     font.weight: Font.Bold
-                    // TODO: CPU and RAM always white, no color change based on usage
                     color: "white"
                 }
             }

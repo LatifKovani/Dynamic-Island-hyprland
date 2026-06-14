@@ -173,8 +173,13 @@ Scope {
     }
 
     Connections {
-        target: SystemServices
-        function onNotificationReceived(appName, summary, body) {
+        target: Notifs
+        function onNotificationAdded(notif) {
+            // Don't show if DND is on (Notifs already suppresses, but belt+suspenders)
+            if (Notifs.dndEnabled)
+                return;
+
+            // Don't show if focus/DND card is active in the control center
             const windows = panelVariants.instances ? panelVariants.instances : [];
             for (let i = 0; i < windows.length; i++) {
                 const w = windows[i];
@@ -185,10 +190,10 @@ Scope {
                     break;
                 }
             }
-            shellRoot.showNotificationAll(appName, summary, body);
+
+            shellRoot.showNotificationAll(notif.appName, notif.summary, notif.body);
         }
     }
-
     Component.onDestruction: {
         shuttingDown = true;
     }

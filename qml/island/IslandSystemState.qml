@@ -19,6 +19,10 @@ Item {
     property bool customSwipeActive: false
     property real _ramTotalGb: 0
     property real _ramUsedGb: 0
+    property var _notifiedMilestones: ({})
+    property bool _criticalBatteryActive: false
+
+    signal criticalBatteryRequested(string icon, real progress, string text)
 
     readonly property var configuredLeftSwipeIds: buildNormalizedSwipeItemIds(configuredLeftSwipeItems)
     readonly property bool usesSystemStatsModule: configuredLeftSwipeIds.indexOf("cpu") !== -1 || configuredLeftSwipeIds.indexOf("ram") !== -1
@@ -543,6 +547,8 @@ Item {
         }
 
         function onBatteryChanged(capacity, statusString) {
+            console.log("Battery:", capacity, statusString);
+
             root.batteryCapacity = capacity;
 
             const direction = (statusString === "Charging" || statusString === "Full") ? "charging" : "discharging";
@@ -552,12 +558,29 @@ Item {
                 chargeNotificationDebounce.restart();
             }
 
-            if (!root.isCharging && capacity <= 25 && !root._lowBatteryNotified) {
-                root._lowBatteryNotified = true;
-                root.transientRequested("\uf244", capacity / 100.0, "Low battery");
+            // Reset low battery tracking when charger is plugged in
+            if (direction === "charging") {
+                root._lowBatteryNotified = false;
+                root._criticalBatteryActive = false;
+                return;
             }
-            if (!root.isCharging && capacity <= 5) {
-                root.transientRequested("\uf244", capacity / 100.0, "Critically low battery");
+
+            // Milestone notifications: 25, 20, 15, 10
+            const milestones = [25, 20, 15, 10];
+            for (const m of milestones) {
+                if (capacity <= m && !root._notifiedMilestones[m]) {
+                    root._notifiedMilestones = Object.assign({}, root._notifiedMilestones, {
+                        [m]: true
+                    });
+                    root.transientRequested("\uf244", capacity / 100.0, "Battery at " + m + "%");
+                    break; // one notification per event
+                }
+            }
+
+            // Below 10% — pin the notification (don't auto-hide)
+            if (capacity <= 10) {
+                root._criticalBatteryActive = true;
+                root.criticalBatteryRequested("\uf244", capacity / 100.0, "Battery critically low — " + capacity + "%");
             }
         }
 

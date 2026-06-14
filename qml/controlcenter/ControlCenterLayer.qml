@@ -1117,16 +1117,16 @@ Item {
                     Item {
                         readonly property int tipW: 2
                         readonly property int tipH: 5
-                        readonly property int outerR: 5
+                        readonly property int outerR: 6
                         readonly property int innerR: 3
-                        readonly property int bw: 34
-                        readonly property int bh: 16
+                        readonly property int bw: 37
+                        readonly property int bh: 17
                         width: bw + tipW + 1
                         height: bh
                         anchors.verticalCenter: parent.verticalCenter
 
                         readonly property color bodyColor: batteryCapacity <= 20 ? StyleTokens.danger : StyleTokens.white
-                        readonly property color emptyColor: Qt.rgba(1, 1, 1, 0.35)
+                        readonly property color emptyColor: Qt.rgba(1, 1, 1, 0.56)
 
                         Rectangle {
                             id: headerBatteryBody
@@ -1176,7 +1176,7 @@ Item {
                                 Text {
                                     text: batteryCapacity + ""
                                     color: "black"
-                                    font.pixelSize: 10
+                                    font.pixelSize: 12
                                     font.family: textFontFamily
                                     font.weight: Font.DemiBold
                                     anchors.verticalCenter: parent.verticalCenter
@@ -1184,7 +1184,7 @@ Item {
                                 Text {
                                     text: "\uf0e7"
                                     color: "#242424"
-                                    font.pixelSize: 8
+                                    font.pixelSize: 11
                                     font.family: iconFontFamily
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
@@ -1195,7 +1195,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: batteryCapacity + ""
                                 color: batteryCapacity <= 20 ? "white" : "black"
-                                font.pixelSize: 10
+                                font.pixelSize: 13
                                 font.family: textFontFamily
                                 font.weight: Font.DemiBold
                                 z: 2
