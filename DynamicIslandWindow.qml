@@ -1168,7 +1168,7 @@ PanelWindow {
                 case "app_launcher":
                     return 580;
                 case "wallpaper_picker":
-                    return 680;
+                    return 1100;
                 case "expanded":
                     return 620;
                 case "bluetooth_expanded":
@@ -1193,7 +1193,7 @@ PanelWindow {
                 case "app_launcher":
                     return 390;
                 case "wallpaper_picker":
-                    return 390;
+                    return 260;
                 case "expanded":
                     return 192;
                 case "bluetooth_expanded":

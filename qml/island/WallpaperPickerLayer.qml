@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Io
+import Quickshell.Widgets
 
 Item {
     id: root
@@ -10,20 +11,14 @@ Item {
     property string iconFontFamily: ""
     property string textFontFamily: ""
 
-    property string wallpaperDir: {
-        const home = Qt.resolvedUrl("~").toString().replace("file://", "");
-        return home + "/Pictures/Wallpapers";
-    }
-
     property int transitionFps: 60
     property int transitionStep: 5
 
     property bool wallpapersLoaded: false
     property string activeWallpaper: ""
-    property int highlightedIndex: -1
-    property int selectedTransitionIndex: 0
 
     readonly property var transitionTypes: ["center", "simple", "left", "right", "top", "bottom", "any", "random"]
+    property int selectedTransitionIndex: 0
 
     focus: true
     anchors.fill: parent
@@ -31,18 +26,29 @@ Item {
 
     Behavior on opacity {
         NumberAnimation {
-            duration: showCondition ? 220 : 100
+            duration: showCondition ? 240 : 120
             easing.type: Easing.InOutQuad
         }
     }
 
     onShowConditionChanged: {
         if (showCondition) {
-            filterWallpapers("");
-            highlightedIndex = -1;
             if (!wallpapersLoaded)
                 scanProcess.running = true;
+            else
+                syncCurrentIndex();
             focusTimer.restart();
+        }
+    }
+
+    function syncCurrentIndex() {
+        if (root.activeWallpaper === "")
+            return;
+        for (let i = 0; i < allWallpapers.count; i++) {
+            if (allWallpapers.get(i).filePath === root.activeWallpaper) {
+                pathView.currentIndex = i;
+                return;
+            }
         }
     }
 
@@ -61,28 +67,18 @@ Item {
             break;
         case Qt.Key_Right:
         case Qt.Key_Tab:
-            moveHighlight(1);
+            pathView.incrementCurrentIndex();
             event.accepted = true;
             break;
         case Qt.Key_Left:
         case Qt.Key_Backtab:
-            moveHighlight(-1);
-            event.accepted = true;
-            break;
-        case Qt.Key_Down:
-            moveHighlight(gridColumns);
-            event.accepted = true;
-            break;
-        case Qt.Key_Up:
-            moveHighlight(-gridColumns);
+            pathView.decrementCurrentIndex();
             event.accepted = true;
             break;
         case Qt.Key_Return:
         case Qt.Key_Enter:
-            if (highlightedIndex >= 0 && highlightedIndex < shownWallpapers.count)
-                root.applyWallpaper(shownWallpapers.get(highlightedIndex).filePath);
-            else if (shownWallpapers.count > 0)
-                root.applyWallpaper(shownWallpapers.get(0).filePath);
+            if (allWallpapers.count > 0)
+                root.applyWallpaper(allWallpapers.get(pathView.currentIndex).filePath);
             event.accepted = true;
             break;
         }
@@ -91,23 +87,6 @@ Item {
     ListModel {
         id: allWallpapers
     }
-    ListModel {
-        id: shownWallpapers
-    }
-
-    function filterWallpapers(query) {
-        shownWallpapers.clear();
-        highlightedIndex = -1;
-        const q = query.toLowerCase().trim();
-        for (let i = 0; i < allWallpapers.count; i++) {
-            const w = allWallpapers.get(i);
-            if (!q || w.fileName.toLowerCase().includes(q))
-                shownWallpapers.append({
-                    filePath: w.filePath,
-                    fileName: w.fileName
-                });
-        }
-    }
 
     function applyWallpaper(filePath) {
         applyProcess.wallpaperPath = filePath;
@@ -115,18 +94,6 @@ Item {
         applyProcess.running = true;
         root.activeWallpaper = filePath;
         root.closeRequested();
-    }
-
-    function moveHighlight(delta) {
-        if (shownWallpapers.count === 0)
-            return;
-        let next = highlightedIndex + delta;
-        if (next < 0)
-            next = shownWallpapers.count - 1;
-        if (next >= shownWallpapers.count)
-            next = 0;
-        highlightedIndex = next;
-        wallpaperGrid.positionViewAtIndex(next, GridView.Contain);
     }
 
     Process {
@@ -144,7 +111,7 @@ Item {
         }
         onExited: {
             root.wallpapersLoaded = true;
-            root.filterWallpapers("");
+            root.syncCurrentIndex();
         }
     }
 
@@ -156,19 +123,37 @@ Item {
         onExited: running = false
     }
 
-    readonly property int gridColumns: 3
-    readonly property real thumbSize: (width - 24 - (gridColumns + 1) * 6) / gridColumns
+    readonly property real topPad: 14
+    readonly property real botPad: 8
+    readonly property real hPad: 12
+    readonly property real headerH: 30
+    readonly property real headerGap: 8
+    readonly property real labelH: 22
+    readonly property real labelGap: 5
+
+    readonly property real cardW: Math.round(slotW * 1.15)
+    readonly property real cardH: Math.round(cardW * 0.58)
+    readonly property real spacing: slotW * 1.20
+
+    readonly property real sideScale: 0.78
+
+    readonly property real slotW: (width - hPad * 2) / 5
+
+    readonly property real cardAreaH: height - topPad - headerH - headerGap - botPad
 
     // ── UI ────────────────────────────────────────────────────────────────────
     Column {
         anchors.fill: parent
-        anchors.margins: 12
-        spacing: 8
+        anchors.topMargin: 10
+        anchors.leftMargin: root.hPad
+        anchors.rightMargin: root.hPad
+        anchors.bottomMargin: 6
+        spacing: 6
 
-        // ── Top bar ───────────────────────────────────────────────────────────
+        // ── Header ─────────────────────────────────────────────────────────
         Item {
             width: parent.width
-            height: 36
+            height: 30
 
             Text {
                 anchors.left: parent.left
@@ -178,40 +163,39 @@ Item {
                 font.pixelSize: 14
                 font.family: root.textFontFamily
                 font.weight: Font.DemiBold
-                opacity: 0.85
+                opacity: 0.88
             }
 
             Rectangle {
-                id: transitionPill
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                width: transitionLabel.implicitWidth + 20
-                height: 28
-                radius: 14
-                color: transitionMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : transitionMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                width: pillLabel.implicitWidth + 20
+                height: 24
+                radius: 50
+                color: pillMouse.pressed ? Qt.rgba(1, 1, 1, 0.16) : pillMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.06)
                 Behavior on color {
                     ColorAnimation {
-                        duration: 120
+                        duration: 100
                     }
                 }
 
                 Text {
-                    id: transitionLabel
+                    id: pillLabel
                     anchors.centerIn: parent
                     text: root.transitionTypes[root.selectedTransitionIndex]
-                    color: transitionMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.5)
+                    color: pillMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.50)
                     font.pixelSize: 11
                     font.family: root.textFontFamily
                     font.weight: Font.Medium
                     Behavior on color {
                         ColorAnimation {
-                            duration: 120
+                            duration: 100
                         }
                     }
                 }
 
                 MouseArea {
-                    id: transitionMouse
+                    id: pillMouse
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: root.selectedTransitionIndex = (root.selectedTransitionIndex + 1) % root.transitionTypes.length
@@ -219,135 +203,197 @@ Item {
             }
         }
 
-        // ── Wallpaper grid ────────────────────────────────────────────────────
+        // ── Carousel ───────────────────────────────────────────────────────
         Item {
             width: parent.width
-            height: parent.height - 36 - 8
+            height: root.cardAreaH
 
-            Text {
+            // Empty state
+            Column {
                 anchors.centerIn: parent
-                visible: !root.wallpapersLoaded || shownWallpapers.count === 0
-                text: !root.wallpapersLoaded ? "Scanning…" : "No wallpapers found\nin ~/Pictures/Wallpapers"
-                horizontalAlignment: Text.AlignHCenter
-                color: Qt.rgba(1, 1, 1, 0.25)
-                font.pixelSize: 12
-                font.family: root.textFontFamily
-                lineHeight: 1.5
+                spacing: 8
+                visible: !root.wallpapersLoaded || allWallpapers.count === 0
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: !root.wallpapersLoaded ? "Scanning…" : "\uf03e"
+                    font.pixelSize: !root.wallpapersLoaded ? 12 : 26
+                    font.family: !root.wallpapersLoaded ? root.textFontFamily : root.iconFontFamily
+                    color: Qt.rgba(1, 1, 1, 0.22)
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    visible: root.wallpapersLoaded && allWallpapers.count === 0
+                    text: "No wallpapers found\nin ~/Pictures/Wallpapers"
+                    horizontalAlignment: Text.AlignHCenter
+                    color: Qt.rgba(1, 1, 1, 0.22)
+                    font.pixelSize: 11
+                    font.family: root.textFontFamily
+                    lineHeight: 1.5
+                }
             }
 
-            GridView {
-                id: wallpaperGrid
+            PathView {
+                id: pathView
                 anchors.fill: parent
-                model: shownWallpapers
-                cellWidth: root.thumbSize + 6
-                cellHeight: root.thumbSize * 0.5625 + 6
-                clip: true
+                model: allWallpapers
+                visible: allWallpapers.count > 0
+                clip: false
+
+                pathItemCount: Math.min(allWallpapers.count, 5)
+                cacheItemCount: 4
+                snapMode: PathView.SnapToItem
+                preferredHighlightBegin: 0.5
+                preferredHighlightEnd: 0.5
+                highlightRangeMode: PathView.StrictlyEnforceRange
+                highlightMoveDuration: 200
+
+                path: Path {
+                    startX: pathView.width / 2 - root.spacing * 2
+                    startY: root.cardH / 2
+                    PathLine {
+                        x: pathView.width / 2 + root.spacing * 2
+                        y: root.cardH / 2
+                    }
+                }
 
                 delegate: Item {
-                    width: wallpaperGrid.cellWidth
-                    height: wallpaperGrid.cellHeight
+                    id: del
+                    readonly property bool isCurrent: PathView.isCurrentItem
+                    readonly property bool onPath: PathView.onPath
 
-                    readonly property bool isHighlighted: index === root.highlightedIndex
-                    readonly property bool isCurrent: model.filePath === root.activeWallpaper
+                    width: root.cardW
+                    height: root.cardH + root.labelGap + root.labelH
+                    z: isCurrent ? 3 : 1
 
-                    Rectangle {
-                        id: thumbContainer
-                        width: root.thumbSize
-                        height: root.thumbSize * 0.5625
-                        radius: 8
-                        color: "#1a1a1a"
-                        clip: true
-
-                        border.width: isCurrent ? 2 : (isHighlighted ? 1.5 : 0)
-                        border.color: isCurrent ? "#60a5fa" : Qt.rgba(1, 1, 1, 0.5)
-                        Behavior on border.color {
-                            ColorAnimation {
-                                duration: 80
-                            }
+                    property real sc: isCurrent ? 1.0 : onPath ? root.sideScale : 0.0
+                    Behavior on sc {
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
                         }
-                        Behavior on border.width {
-                            NumberAnimation {
-                                duration: 80
-                            }
+                    }
+
+                    property real op: isCurrent ? 1.0 : onPath ? 0.65 : 0.0
+                    Behavior on op {
+                        NumberAnimation {
+                            duration: 180
+                            easing.type: Easing.OutCubic
                         }
+                    }
 
-                        Image {
-                            anchors.fill: parent
-                            anchors.margins: isCurrent ? 2 : (isHighlighted ? 1.5 : 0)
-                            source: "file://" + model.filePath
-                            fillMode: Image.PreserveAspectCrop
-                            asynchronous: true
-                            cache: true
-                            smooth: true
-                            mipmap: true
-                            sourceSize: Qt.size(root.thumbSize * 2, root.thumbSize * 1.125)
-                            Behavior on anchors.margins {
-                                NumberAnimation {
-                                    duration: 80
-                                }
-                            }
+                    Item {
+                        id: inner
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.top: parent.top
+                        width: root.cardW
+                        height: root.cardH + root.labelGap + root.labelH
+                        scale: del.sc
+                        opacity: del.op
+                        transformOrigin: Item.Bottom
 
-                            Rectangle {
+                        // Clipped image
+                        ClippingRectangle {
+                            id: thumb
+                            anchors.top: parent.top
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: root.cardW
+                            height: root.cardH
+                            radius: 14
+                            color: "#1a1a1a"
+
+                            Image {
                                 anchors.fill: parent
-                                color: "#1a1a1a"
-                                opacity: parent.status === Image.Ready ? 0 : 1
-                                Behavior on opacity {
-                                    NumberAnimation {
-                                        duration: 150
+                                source: "file://" + model.filePath
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                cache: true
+                                smooth: true
+                                mipmap: true
+                                sourceSize: Qt.size(root.cardW * 2, root.cardH * 2)
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "#282828"
+                                    opacity: parent.status === Image.Ready ? 0 : 1
+                                    Behavior on opacity {
+                                        NumberAnimation {
+                                            duration: 200
+                                        }
                                     }
                                 }
                             }
                         }
 
-                        Rectangle {
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.bottom: parent.bottom
-                            height: 22
-                            radius: 6
-                            color: Qt.rgba(0, 0, 0, 0.55)
-                            visible: thumbMouse.containsMouse || isHighlighted
-
-                            Text {
-                                anchors.fill: parent
-                                anchors.leftMargin: 6
-                                anchors.rightMargin: 6
-                                verticalAlignment: Text.AlignVCenter
-                                text: model.fileName
-                                color: "white"
-                                font.pixelSize: 9
-                                font.family: root.textFontFamily
-                                elide: Text.ElideMiddle
-                            }
-                        }
-
+                        // Border overlay
                         Rectangle {
                             anchors.top: parent.top
-                            anchors.right: parent.right
-                            anchors.margins: 5
-                            width: 16
-                            height: 16
-                            radius: 8
-                            color: "#60a5fa"
-                            visible: isCurrent
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: root.cardW
+                            height: root.cardH
+                            radius: 14
+                            color: "transparent"
+                            border.width: (model.filePath === root.activeWallpaper) ? 2.5 : 0
+                            border.color: "#60a5fa"
+                            Behavior on border.width {
+                                NumberAnimation {
+                                    duration: 150
+                                }
+                            }
 
-                            Text {
-                                anchors.centerIn: parent
-                                text: "\uf00c"
-                                font.family: root.iconFontFamily
-                                font.pixelSize: 8
-                                color: "white"
+                            // Active badge
+                            Rectangle {
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                                anchors.margins: 7
+                                width: 20
+                                height: 20
+                                radius: 10
+                                color: "#60a5fa"
+                                visible: model.filePath === root.activeWallpaper
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "\uf00c"
+                                    font.family: root.iconFontFamily
+                                    font.pixelSize: 10
+                                    color: "white"
+                                }
                             }
                         }
 
+                        // Click area
                         MouseArea {
-                            id: thumbMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: root.applyWallpaper(model.filePath)
-                            onContainsMouseChanged: {
-                                if (containsMouse)
-                                    root.highlightedIndex = index;
+                            anchors.top: parent.top
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: root.cardW
+                            height: root.cardH
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (del.isCurrent)
+                                    root.applyWallpaper(model.filePath);
+                                else
+                                    pathView.currentIndex = index;
+                            }
+                        }
+
+                        // Filename label
+                        Text {
+                            anchors.top: thumb.bottom
+                            anchors.topMargin: root.labelGap
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: root.cardW - 4
+                            text: model.fileName
+                            color: del.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.50)
+                            font.pixelSize: del.isCurrent ? 11 : 10
+                            font.family: root.textFontFamily
+                            font.weight: del.isCurrent ? Font.Medium : Font.Normal
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideMiddle
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 150
+                                }
                             }
                         }
                     }
