@@ -9,7 +9,7 @@ Item {
     property string summary: ""
     property string body: ""
     property string iconText: ""
-    property string imagePath: ""          // <- E RE: path i ikonës
+    property string imagePath: ""
     property var configSource: null
     readonly property var activeConfig: configSource || userConfig
     property string iconFontFamily: activeConfig.iconFontFamily
@@ -21,15 +21,57 @@ Item {
     readonly property bool hasTwoLines: bodyText !== ""
     readonly property bool useImageIcon: imagePath !== ""
 
-    readonly property real minimumWidth: 272
-    readonly property real maximumWidth: 420
+    readonly property real minimumWidth: 280
+    readonly property real maximumWidth: 700
     readonly property real iconSlotWidth: 28
     readonly property real contentSpacing: 10
     readonly property real horizontalPadding: 14
     readonly property real verticalPadding: 8
 
-    readonly property real preferredWidth: hasTwoLines ? maximumWidth : Math.max(minimumWidth, maximumWidth * 0.78)
+    readonly property real titleWidth: {
+        if (titleText === "")
+            return 0;
+        var metrics = titleMetrics;
+        metrics.text = titleText;
+        return metrics.advanceWidth;
+    }
+
+    readonly property real bodyWidth: {
+        if (bodyText === "")
+            return 0;
+        var metrics = bodyMetrics;
+        metrics.text = bodyText;
+        return metrics.advanceWidth;
+    }
+
+    readonly property real preferredWidth: {
+        var width = minimumWidth;
+
+        var textWidth = Math.max(titleWidth, bodyWidth);
+        var neededWidth = textWidth + iconSlotWidth + contentSpacing + horizontalPadding * 2 + 20; // Extra padding for safety
+
+        width = Math.max(minimumWidth, neededWidth);
+
+        return Math.min(maximumWidth, width);
+    }
+
     readonly property real preferredHeight: hasTwoLines ? 68 : 56
+
+    TextMetrics {
+        id: titleMetrics
+        font.family: textFontFamily
+        font.pixelSize: hasTwoLines ? 13 : 15
+        font.weight: Font.DemiBold
+        font.letterSpacing: -0.15
+    }
+
+    TextMetrics {
+        id: bodyMetrics
+        font.family: textFontFamily
+        font.pixelSize: 12
+        font.weight: Font.Normal
+        font.letterSpacing: -0.1
+    }
 
     anchors.fill: parent
     anchors.margins: 0
@@ -50,13 +92,11 @@ Item {
         anchors.bottomMargin: verticalPadding
         spacing: contentSpacing
 
-        // --- IKONA ---
         Item {
             width: iconSlotWidth
             height: iconSlotWidth
             anchors.verticalCenter: parent.verticalCenter
 
-            // Logo PNG (Brave, Firefox, etj.)
             Image {
                 id: appIcon
                 anchors.fill: parent
@@ -66,7 +106,6 @@ Item {
                 visible: useImageIcon && status === Image.Ready
             }
 
-            // Fallback: font icon
             Text {
                 anchors.fill: parent
                 visible: !useImageIcon || appIcon.status !== Image.Ready
@@ -79,14 +118,13 @@ Item {
             }
         }
 
-        // --- TEKSTI ---
         Column {
             width: parent.width - iconSlotWidth - contentSpacing
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
 
-            // Rreshti 1: Summary — emri dërguesit
             Text {
+                id: titleTextItem
                 width: parent.width
                 text: titleText
                 color: "white"
@@ -96,10 +134,14 @@ Item {
                 font.letterSpacing: -0.15
                 elide: Text.ElideRight
                 maximumLineCount: 1
+                onImplicitWidthChanged: {
+                    root.preferredWidthChanged();
+                }
             }
 
             // Rreshti 2: Body — pjesa e mesazhit
             Text {
+                id: bodyTextItem
                 width: parent.width
                 visible: hasTwoLines
                 height: hasTwoLines ? implicitHeight : 0
@@ -111,6 +153,9 @@ Item {
                 font.letterSpacing: -0.1
                 elide: Text.ElideRight
                 maximumLineCount: 1
+                onImplicitWidthChanged: {
+                    root.preferredWidthChanged();
+                }
             }
         }
     }

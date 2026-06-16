@@ -1,6 +1,3 @@
-//-- FIX: Focus moon icon layout, its showing under the text, make the same as Night light the width the height, the same construct.
-//-- TODO: Add a notification when i enable focus and disable.
-//-- FIX: Also Focus there it says enabled but when i test notifications come.
 import QtQuick
 import Quickshell
 import Quickshell.Bluetooth

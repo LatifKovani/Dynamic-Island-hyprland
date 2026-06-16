@@ -1,9 +1,9 @@
-//-- TODO: When I log in, tide-island should show like a lock unlocking, like macos style.
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import IslandBackend
+import Quickshell.Io
 import "qml/common"
 import "qml/controlcenter"
 import "qml/connectivity"
@@ -175,7 +175,6 @@ PanelWindow {
             shellRootController.closeOverviewAll();
             return;
         }
-
         closeOverview();
     }
 
@@ -220,7 +219,6 @@ PanelWindow {
             shellRootController.openOverviewAll();
             return;
         }
-
         openOverview();
     }
 
@@ -229,7 +227,6 @@ PanelWindow {
             shellRootController.prepareOverviewAll();
             return;
         }
-
         prepareOverview();
     }
 
@@ -238,7 +235,6 @@ PanelWindow {
             shellRootController.cancelPreparedOverviewAll();
             return;
         }
-
         cancelPreparedOverview();
     }
 
@@ -247,7 +243,6 @@ PanelWindow {
             shellRootController.toggleOverviewAll();
             return;
         }
-
         if (overviewMounted)
             closeOverviewEverywhere();
         else
@@ -279,6 +274,13 @@ PanelWindow {
             overviewFocusTimer.restart();
         if (connectivityPromptActive && monitorFocused)
             connectivityPromptFocusTimer.restart();
+    }
+    Timer {
+        id: startupSuppressTimer
+        interval: 2000
+        repeat: false
+        running: true
+        onTriggered: islandContainer.startupSuppressTransients = false
     }
 
     Timer {
@@ -361,7 +363,11 @@ PanelWindow {
         anchors.fill: parent
         focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.appLauncherLayerVisible || islandContainer.powerMenuLayerVisible)
 
-        property string islandState: "normal"
+        property real lockUnlockCapsuleWidth: 140
+        property bool lockUnlockResetting: false
+        property bool skipWidthAnimation: false
+        property string islandState: "lock_unlock"
+        property bool startupSuppressTransients: true
         property string splitIcon: root.defaultSplitIcon
         property real osdProgress: -1.0
         property bool osdProgressAnimationEnabled: true
@@ -397,7 +403,10 @@ PanelWindow {
         readonly property int notificationAutoHideInterval: 4200
         readonly property int bluetoothExpandedAutoHideInterval: 2500
         readonly property int swipeAnimationDuration: 220
-        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker"
+
+        // ── lock_unlock shtohet te blocksTransientSplit ──
+        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker" || islandState === "lock_unlock"
+
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
@@ -425,6 +434,7 @@ PanelWindow {
         readonly property string timeTotal: mediaController.timeTotal
         readonly property bool screenRecordingActive: root.screenRecordingActive
         readonly property bool wallpaperPickerLayerVisible: !root.overviewVisible && islandState === "wallpaper_picker"
+        readonly property bool lockUnlockLayerVisible: !root.overviewVisible && islandState === "lock_unlock"
 
         readonly property var bluetoothDevices: bluetoothConnectionTracker.devices
         readonly property var overviewView: overviewLoader.item && overviewLoader.item.overviewView ? overviewLoader.item.overviewView : null
@@ -437,11 +447,17 @@ PanelWindow {
                     root.closeAllConnectivityDetails();
             }
         }
+        onIslandStateChanged: {
+            if (islandState !== "lock_unlock" && (lockUnlockResetting || skipWidthAnimation)) {
+                lockUnlockResetTimer.stop();
+                lockUnlockResetting = false;
+                skipWidthAnimation = false;
+            }
+        }
 
         onCustomLeftItemsChanged: {
             if (restingState === "custom" && !hasCustomLeftItems) {
                 restingState = "normal";
-
                 if (islandState === "custom" || (islandState === "split" && splitOriginSide === "left") || (islandState === "long_capsule" && workspaceOriginSide === "left")) {
                     restoreRestingCapsule(true);
                 } else {
@@ -454,17 +470,15 @@ PanelWindow {
 
         IslandMprisController {
             id: mediaController
-
             expanded: islandContainer.islandState === "expanded"
         }
-        // ADD THIS PRELOADER IMAGE:
+
         Image {
             id: artPreloader
             visible: false
             asynchronous: false
             cache: true
             sourceSize: Qt.size(192, 192)
-
             onStatusChanged: {
                 if (status === Image.Ready) {
                     islandContainer.preloadedArtReady = true;
@@ -474,9 +488,7 @@ PanelWindow {
 
         BluetoothConnectionTracker {
             id: bluetoothConnectionTracker
-
             onAdapterChanged: islandContainer.bluetoothExpandedDevice = null
-
             onNewConnection: function (device) {
                 islandContainer.showBluetoothExpanded(device);
             }
@@ -484,13 +496,13 @@ PanelWindow {
 
         IslandSystemState {
             id: systemState
-
             configuredLeftSwipeItems: userConfig.dynamicIslandLeftSwipeItems
             timeText: timeObj.currentTime
             dateText: timeObj.currentDateLabel
             currentWorkspace: islandContainer.currentWs
             customSwipeActive: customSwipeLoader.active
         }
+
         Connections {
             target: systemState
             function onTransientRequested(icon, progress, text) {
@@ -503,15 +515,12 @@ PanelWindow {
 
         HyprlandWorkspaceTracker {
             id: workspaceTracker
-
             hyprMonitor: root.hyprMonitor
             monitorName: root.hyprMonitorName
             monitorFocused: root.monitorFocused
-
             onWorkspaceSynced: function (workspaceId) {
                 islandContainer.currentWs = workspaceId;
             }
-
             onWorkspaceActivated: function (workspaceId) {
                 islandContainer.showWorkspaceCapsule(workspaceId);
             }
@@ -519,11 +528,17 @@ PanelWindow {
 
         Behavior on osdProgress {
             enabled: islandContainer.osdProgressAnimationEnabled
-
             SmoothedAnimation {
                 velocity: 1.2
                 duration: 180
                 easing.type: Easing.InOutQuad
+            }
+        }
+        Behavior on lockUnlockCapsuleWidth {
+            enabled: islandState === "lock_unlock"
+            NumberAnimation {
+                duration: 350
+                easing.type: Easing.OutBack
             }
         }
         Behavior on swipeTransitionProgress {
@@ -541,7 +556,6 @@ PanelWindow {
                 }
                 return;
             }
-
             if (!root.overviewVisible)
                 return;
         }
@@ -672,10 +686,10 @@ PanelWindow {
                 return "none";
             }
         }
+
         function showCriticalBatteryNotification(icon, progress, text) {
             if (root.overviewVisible)
                 return;
-            // If already pinned, just update the text in place
             if (islandState === "notification" && notificationAppName === "Battery") {
                 notificationSummary = text;
                 return;
@@ -778,7 +792,6 @@ PanelWindow {
                     nextProgress += progressToCenter;
                     remainingDelta -= progressToCenter * leftDistance;
                 }
-
                 if (remainingDelta > 0 && nextProgress < 1) {
                     const rightDistance = Math.max(1, sideSwipeDragDistanceForDirection("right"));
                     nextProgress = Math.min(1, nextProgress + remainingDelta / rightDistance);
@@ -790,7 +803,6 @@ PanelWindow {
                     nextProgress -= progressToCenter;
                     remainingDelta += progressToCenter * rightDistance;
                 }
-
                 if (remainingDelta < 0 && nextProgress > minProgress) {
                     const leftDistance = Math.max(1, sideSwipeDragDistanceForDirection("left"));
                     nextProgress = Math.max(minProgress, nextProgress + remainingDelta / leftDistance);
@@ -865,18 +877,11 @@ PanelWindow {
         }
 
         function showTransientCapsule(icon, progress, customText) {
-            if (progress === undefined)
-                progress = -1.0;
-            if (customText === undefined)
-                customText = "";
-
-            if (blocksTransientSplit)
+            if (startupSuppressTransients)
                 return;
-
             const nextProgress = progress >= 0 ? progress : -1.0;
             const animateProgress = islandState === "split" && osdProgress >= 0 && nextProgress >= 0;
             const animateFromSide = currentTransientOriginSide();
-
             abortSideTransientMode();
             splitIcon = icon;
             osdCustomText = customText;
@@ -896,7 +901,6 @@ PanelWindow {
                     return "";
                 const parts = raw.split("\n\n");
                 if (parts.length >= 2) {
-                    // Merr gjithçka pas \n\n, hiq domain-et e njohura
                     const extracted = parts.slice(1).join(" ").trim();
                     return extracted;
                 }
@@ -927,7 +931,6 @@ PanelWindow {
             const resolvedSummary = cleanedSummary !== "" ? cleanedSummary : (cleanedBody !== "" ? cleanedBody : "New notification");
             if (controlCenterLoader.item)
                 controlCenterLoader.item.appendNotification(cleanedAppName !== "" ? cleanedAppName : "Notification", resolvedSummary, cleanedSummary !== "" ? cleanedBody : "");
-
             abortSideTransientMode();
             clearTransientCapsule();
             notificationAppName = cleanedAppName !== "" ? cleanedAppName : "Notification";
@@ -945,6 +948,7 @@ PanelWindow {
         function restoreRestingCapsule(forceImmediate) {
             if (forceImmediate === undefined)
                 forceImmediate = false;
+
             const normalizedRestingState = normalizeRestingState(restingState);
             const targetSide = restingStateSide(normalizedRestingState);
             const shouldAnimateToSide = targetSide !== "none" && ((islandState === "long_capsule" && workspaceOriginSide === targetSide) || (islandState === "split" && splitOriginSide === targetSide));
@@ -997,7 +1001,6 @@ PanelWindow {
         function showBluetoothExpanded(device) {
             if (!device || root.overviewVisible || islandState === "control_center" || islandState === "notification")
                 return;
-
             cancelSideSwipeSettle();
             abortSideTransientMode();
             clearTransientCapsule();
@@ -1025,6 +1028,7 @@ PanelWindow {
             mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
             stopAutoHideTimer();
         }
+
         function showAppLauncher() {
             cancelSideSwipeSettle();
             abortSideTransientMode();
@@ -1033,6 +1037,7 @@ PanelWindow {
             mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
             stopAutoHideTimer();
         }
+
         function showWallpaperPicker() {
             cancelSideSwipeSettle();
             abortSideTransientMode();
@@ -1042,12 +1047,45 @@ PanelWindow {
             stopAutoHideTimer();
         }
 
+        // ── NEW: Lock Unlock ──────────────────────────────────────────────
+        function showLockUnlock() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            lockUnlockResetting = false;
+            skipWidthAnimation = false;
+            islandState = "lock_unlock";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
+        function resetLockUnlockCapsule() {
+            if (lockUnlockResetting)
+                return;
+            lockUnlockResetting = true;
+            skipWidthAnimation = true;
+            lockUnlockCapsuleWidth = 140;
+            lockUnlockResetTimer.restart();
+        }
+
+        Timer {
+            id: lockUnlockResetTimer
+            interval: 10
+            repeat: false
+            onTriggered: {
+                islandContainer.lockUnlockResetting = false;
+                islandContainer.smartRestoreState();
+                // Reset the flag after the state change is complete
+                Qt.callLater(function () {
+                    islandContainer.skipWidthAnimation = false;
+                });
+            }
+        }
         function showCustomCapsule() {
             if (!hasCustomLeftItems) {
                 showTimeCapsule();
                 return;
             }
-
             systemState.refreshMissingValues();
             showRestingCapsule("custom");
         }
@@ -1118,7 +1156,9 @@ PanelWindow {
         }
 
         onCurrentTrackChanged: {
-            if (currentTrack !== "" && islandState !== "control_center" && islandState !== "notification" && islandState !== "bluetooth_expanded") {
+            if (userConfig.disableAutoExpandOnTrackChange)
+                return;
+            if (currentTrack !== "" && islandState !== "control_center" && islandState !== "notification" && islandState !== "bluetooth_expanded" && islandState !== "lock_unlock") {
                 if (islandState === "expanded" && !expandedByPlayerAutoOpen)
                     return;
                 showExpandedPlayer(true);
@@ -1139,6 +1179,7 @@ PanelWindow {
             property real outlineWidth: root.overviewContentVisible ? 1 : 0
             property color outlineColor: root.overviewContentVisible ? root.overviewCapsuleBorderColor : StyleTokens.clearBlack
             property real displayedWidth: baseTargetWidth
+
             readonly property real baseTargetWidth: {
                 if (root.overviewVisible)
                     return root.overviewCapsuleWidth;
@@ -1146,7 +1187,6 @@ PanelWindow {
                     if (islandContainer.restingState === "lyrics" && ((islandContainer.islandState === "split" && islandContainer.splitOriginSide === "right") || (islandContainer.islandState === "long_capsule" && islandContainer.workspaceOriginSide === "right"))) {
                         return islandContainer.lyricsCapsuleWidth;
                     }
-
                     if (islandContainer.restingState === "custom" && ((islandContainer.islandState === "split" && islandContainer.splitOriginSide === "left") || (islandContainer.islandState === "long_capsule" && islandContainer.workspaceOriginSide === "left"))) {
                         return islandContainer.customCapsuleWidth;
                     }
@@ -1173,6 +1213,8 @@ PanelWindow {
                     return 620;
                 case "bluetooth_expanded":
                     return 400;
+                case "lock_unlock":
+                    return islandContainer.lockUnlockCapsuleWidth;
                 case "notification":
                     if (!notificationLoader.item)
                         return 272;
@@ -1181,6 +1223,7 @@ PanelWindow {
                     return 140;
                 }
             }
+
             readonly property real targetHeight: {
                 if (root.overviewVisible)
                     return root.overviewCapsuleHeight;
@@ -1198,12 +1241,15 @@ PanelWindow {
                     return 192;
                 case "bluetooth_expanded":
                     return 165;
+                case "lock_unlock":
+                    return 38;
                 case "notification":
                     return notificationLoader.item ? Math.max(56, Math.min(68, notificationLoader.item.preferredHeight)) : 56;
                 default:
                     return 38;
                 }
             }
+
             readonly property real targetRadius: {
                 if (root.overviewVisible)
                     return root.overviewCapsuleRadius;
@@ -1218,14 +1264,18 @@ PanelWindow {
                 case "wallpaper_picker":
                     return 34;
                 case "expanded":
+                    return 40;
                 case "bluetooth_expanded":
                     return 40;
+                case "lock_unlock":
+                    return 19;
                 case "notification":
                     return mainCapsule.targetHeight / 2;
                 default:
                     return 19;
                 }
             }
+
             function sideSwipeWidthForProgress(progressValue) {
                 if (progressValue < 0)
                     return 140 + (islandContainer.customCapsuleWidth - 140) * islandContainer.clamp01(-progressValue);
@@ -1233,6 +1283,7 @@ PanelWindow {
                     return 140 + (islandContainer.lyricsCapsuleWidth - 140) * islandContainer.clamp01(progressValue);
                 return 140;
             }
+
             readonly property real sideSwipePreviewWidth: mainCapsule.sideSwipeWidthForProgress(islandContainer.swipeTransitionProgress)
             color: root.overviewContentVisible ? root.overviewCapsuleColor : StyleTokens.black
             y: 4
@@ -1248,14 +1299,14 @@ PanelWindow {
             }
 
             Behavior on displayedWidth {
+                enabled: !capsuleMouseArea.sideSwipeInteractive
                 NumberAnimation {
-                    duration: capsuleMouseArea.sideSwipeInteractive ? 0 : mainCapsule.morphDuration
+                    duration: islandContainer.skipWidthAnimation ? 0 : mainCapsule.morphDuration
                     easing.type: Easing.OutQuint
                 }
             }
             Behavior on height {
                 enabled: !(controlCenterLoader.item && controlCenterLoader.item.batteryDrawerMoving)
-
                 NumberAnimation {
                     duration: mainCapsule.morphDuration
                     easing.type: Easing.OutQuint
@@ -1296,7 +1347,6 @@ PanelWindow {
                 border.width: 1
                 border.color: StyleTokens.overviewInnerBorder
                 opacity: root.overviewContentVisible ? 1 : 0
-
                 Behavior on opacity {
                     NumberAnimation {
                         duration: root.overviewContentVisible ? 260 : 140
@@ -1357,13 +1407,11 @@ PanelWindow {
                 onPositionChanged: mouse => {
                     if (!pressed || !swipeArmed || suppressNextClick || twoFingerTouchArea.touchPoints.length >= 2)
                         return;
-
                     const mappedPoint = capsuleMouseArea.mapToItem(islandContainer, mouse.x, mouse.y);
                     const deltaX = mappedPoint.x - swipeLastX;
                     const deltaY = Math.abs(mappedPoint.y - swipeStartY);
                     const adjustedDeltaX = deltaY < sideSwipeVerticalTolerance ? deltaX : 0;
                     const nextProgress = islandContainer.advanceSideSwipeProgress(islandContainer.swipeTransitionProgress, adjustedDeltaX);
-
                     swipeMoved = swipeMoved || Math.abs(nextProgress - swipeStartProgress) > 0.03 || deltaY > 6;
                     swipeLastX = mappedPoint.x;
                     islandContainer.swipeTransitionProgress = nextProgress;
@@ -1435,13 +1483,11 @@ PanelWindow {
                         preparedOverviewOnPress = false;
                         return;
                     }
-
                     if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandPrimaryButton)) {
                         preparedOverviewOnPress = false;
                         islandContainer.handleConfiguredClickAction(userConfig.dynamicIslandPrimaryAction);
                         return;
                     }
-
                     if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandSecondaryButton)) {
                         preparedOverviewOnPress = false;
                         islandContainer.handleConfiguredClickAction(userConfig.dynamicIslandSecondaryAction);
@@ -1472,14 +1518,11 @@ PanelWindow {
 
                 onUpdated: touchPoints => {
                     const centerPoint = islandContainer.mapFromItem(twoFingerTouchArea, (touchPoints[0].x + touchPoints[1].x) / 2, (touchPoints[0].y + touchPoints[1].y) / 2);
-
                     const deltaX = centerPoint.x - swipeStartX;
                     const nextProgress = islandContainer.advanceSideSwipeProgress(swipeStartProgress, deltaX);
-
                     if (Math.abs(nextProgress - swipeStartProgress) > 0.03) {
                         swipeMoved = true;
                     }
-
                     islandContainer.swipeTransitionProgress = nextProgress;
                     mainCapsule.displayedWidth = mainCapsule.sideSwipePreviewWidth;
                 }
@@ -1487,9 +1530,7 @@ PanelWindow {
                 onReleased: {
                     if (swipeMoved) {
                         const settleResult = islandContainer.resolveSideSwipeSettle(swipeStartProgress, islandContainer.swipeTransitionProgress);
-
                         islandContainer.beginSideSwipeSettle(settleResult.width);
-
                         switch (settleResult.action) {
                         case "time":
                             islandContainer.showTimeCapsule();
@@ -1513,12 +1554,10 @@ PanelWindow {
             Loader {
                 id: customSwipeLoader
                 anchors.fill: parent
-                active: islandContainer.customSwipeVisible
+                active: islandContainer.customSwipeVisible && islandContainer.islandState !== "lock_unlock"
                 asynchronous: false
                 visible: active
-
                 onLoaded: islandContainer.syncCustomCapsuleWidth()
-
                 sourceComponent: Component {
                     SwipeCustomInfoLayer {
                         items: islandContainer.customLeftItems
@@ -1541,12 +1580,10 @@ PanelWindow {
             Loader {
                 id: lyricsSwipeLoader
                 anchors.fill: parent
-                active: islandContainer.lyricsSwipeVisible
+                active: islandContainer.lyricsSwipeVisible && islandContainer.islandState !== "lock_unlock"
                 asynchronous: false
                 visible: active
-
                 onLoaded: islandContainer.syncLyricsCapsuleWidth()
-
                 sourceComponent: Component {
                     SwipeLyricsLayer {
                         lyricText: islandContainer.lyricsDisplayText
@@ -1571,7 +1608,6 @@ PanelWindow {
                 active: !root.overviewVisible && islandContainer.splitShowsIconOnly
                 asynchronous: false
                 visible: active
-
                 sourceComponent: Component {
                     SplitIconLayer {
                         iconText: islandContainer.splitIcon
@@ -1589,7 +1625,6 @@ PanelWindow {
                 active: !root.overviewVisible && islandContainer.splitUsesExtendedLayout
                 asynchronous: false
                 visible: active
-
                 sourceComponent: Component {
                     OsdLayer {
                         iconText: islandContainer.splitIcon
@@ -1611,7 +1646,6 @@ PanelWindow {
                 active: !root.overviewVisible && islandContainer.islandState === "long_capsule" && (islandContainer.workspaceOriginSide !== "none" || Math.abs(islandContainer.swipeTransitionProgress) < 0.001)
                 asynchronous: false
                 visible: active
-
                 sourceComponent: Component {
                     WorkspaceLayer {
                         workspaceId: islandContainer.currentWs
@@ -1632,7 +1666,6 @@ PanelWindow {
                 asynchronous: false
                 visible: islandContainer.expandedLayerVisible
                 anchors.fill: parent
-
                 sourceComponent: Component {
                     NookTrayLayer {
                         currentArtUrl: islandContainer.currentArtUrl
@@ -1658,7 +1691,6 @@ PanelWindow {
                 active: islandContainer.bluetoothExpandedLayerVisible
                 asynchronous: false
                 visible: active
-
                 sourceComponent: Component {
                     BluetoothExpandedLayer {
                         device: islandContainer.bluetoothExpandedDevice
@@ -1677,7 +1709,6 @@ PanelWindow {
                 active: islandContainer.notificationLayerVisible
                 asynchronous: false
                 visible: active
-
                 sourceComponent: Component {
                     NotificationLayer {
                         appName: islandContainer.notificationAppName
@@ -1692,13 +1723,13 @@ PanelWindow {
                     }
                 }
             }
+
             Loader {
                 id: powerMenuLoader
                 anchors.fill: parent
                 active: islandContainer.powerMenuLayerVisible
                 asynchronous: false
                 visible: active
-
                 sourceComponent: Component {
                     PowerMenuLayer {
                         iconFontFamily: root.iconFontFamily
@@ -1708,6 +1739,7 @@ PanelWindow {
                     }
                 }
             }
+
             Loader {
                 id: appLauncherLoader
                 anchors.fill: parent
@@ -1716,7 +1748,6 @@ PanelWindow {
                 onLoaded: keepAlive = true
                 asynchronous: false
                 visible: islandContainer.appLauncherLayerVisible
-
                 sourceComponent: Component {
                     AppLauncherLayer {
                         iconFontFamily: root.iconFontFamily
@@ -1735,7 +1766,6 @@ PanelWindow {
                 onLoaded: keepAlive = true
                 asynchronous: false
                 visible: islandContainer.wallpaperPickerLayerVisible
-
                 sourceComponent: Component {
                     WallpaperPickerLayer {
                         iconFontFamily: root.iconFontFamily
@@ -1745,6 +1775,43 @@ PanelWindow {
                     }
                 }
             }
+
+            Loader {
+                id: lockUnlockLoader
+                anchors.fill: parent
+                active: islandContainer.lockUnlockLayerVisible
+                asynchronous: false
+                visible: active
+                sourceComponent: Component {
+                    LockUnlockLayer {
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        showCondition: islandContainer.lockUnlockLayerVisible
+                        onAnimationFinished: {
+                            islandContainer.resetLockUnlockCapsule();
+                        }
+                    }
+                }
+                onLoaded: {
+                    if (item) {
+                        item.requestCapsuleWidth.connect(function (w) {
+                            islandContainer.lockUnlockCapsuleWidth = w;
+                        });
+                        unlockStartDelay.restart();
+                    }
+                }
+
+                Timer {
+                    id: unlockStartDelay
+                    interval: 420
+                    repeat: false
+                    onTriggered: {
+                        if (lockUnlockLoader.item)
+                            lockUnlockLoader.item.playUnlock();
+                    }
+                }
+            }
+
             Loader {
                 id: controlCenterLoader
                 anchors.fill: parent
@@ -1755,7 +1822,6 @@ PanelWindow {
                     if (item)
                         item.requestNotification.connect(islandContainer.showNotificationCapsule);
                 }
-
                 sourceComponent: Component {
                     ControlCenterLayer {
                         iconFontFamily: root.iconFontFamily
@@ -1778,18 +1844,15 @@ PanelWindow {
 
             Loader {
                 id: overviewLoader
-
                 anchors.fill: parent
                 active: root.overviewLoaderActive
                 asynchronous: false
                 visible: root.overviewContentVisible
-
                 onStatusChanged: {
                     if (status === Loader.Ready && root.overviewPreparing) {
                         root.beginOverviewOpening();
                     }
                 }
-
                 sourceComponent: Component {
                     WorkspaceOverviewScene {
                         screen: root.screen
@@ -1807,7 +1870,6 @@ PanelWindow {
 
         ConnectivityDetailShell {
             id: wifiConnectivityDetailShell
-
             open: root.wifiConnectivityDetailOpen
             mounted: root.wifiConnectivityDetailMounted
             rightSide: false
@@ -1825,7 +1887,6 @@ PanelWindow {
 
         ConnectivityDetailShell {
             id: bluetoothConnectivityDetailShell
-
             open: root.bluetoothConnectivityDetailOpen
             mounted: root.bluetoothConnectivityDetailMounted
             rightSide: true
