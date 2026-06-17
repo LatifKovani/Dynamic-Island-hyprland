@@ -3,6 +3,7 @@ import IslandBackend
 
 Item {
     id: root
+    signal hovered
 
     readonly property var userConfig: UserConfig
 
@@ -39,6 +40,13 @@ Item {
             font.weight: Font.Bold
             font.letterSpacing: -0.35
             wrapMode: Text.NoWrap
+        }
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            propagateComposedEvents: true
+            onEntered: root.hovered()
         }
     }
 }

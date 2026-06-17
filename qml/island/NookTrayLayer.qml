@@ -19,6 +19,7 @@ Item {
     property var activePlayer: null
     property string iconFontFamily: ""
     property string textFontFamily: ""
+    property bool progressDragging: false
 
     property string activeTab: "nook"
 
@@ -282,6 +283,7 @@ Item {
             iconFontFamily: root.iconFontFamily
             textFontFamily: root.textFontFamily
             onControlPressed: root.controlPressed()
+            onProgressDraggingChanged: root.progressDragging = progressDragging
         }
 
         TodoLayer {
@@ -292,7 +294,6 @@ Item {
             textFontFamily: root.textFontFamily
         }
 
-        // PomodoroLayer receives state from parent — no timer inside it
         PomodoroLayer {
             anchors.fill: parent
             enabled: root.activeTab === "timer"
@@ -300,14 +301,12 @@ Item {
             iconFontFamily: root.iconFontFamily
             textFontFamily: root.textFontFamily
 
-            // Pass state down
             pomodoroTotal: root.pomodoroTotal
             pomodoroRemaining: root.pomodoroRemaining
             pomodoroRunning: root.pomodoroRunning
             pomodoroMode: root.pomodoroMode
             sessionsCompleted: root.sessionsCompleted
 
-            // Receive changes back up
             onRequestSetRunning: root.pomodoroRunning = running
             onRequestSetMode: {
                 root.pomodoroMode = mode;

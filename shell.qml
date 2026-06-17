@@ -96,6 +96,18 @@ Scope {
             });
         }
 
+        function toggleClipboardHistory() {
+            shellRoot.forEachWindow(window => {
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
+                    return;
+                const ic = window.islandContainerRef;
+                if (ic.islandState === "clipboard_history")
+                    ic.smartRestoreState();
+                else
+                    ic.showClipboardHistory();
+            });
+        }
+
         function togglePowerMenu() {
             shellRoot.forEachWindow(window => {
                 if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)

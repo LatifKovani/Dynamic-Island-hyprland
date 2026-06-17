@@ -1,4 +1,3 @@
-//-- TODO: When i stop a music from spotify Album art should show spotify icon not chrome.
 import QtQuick
 import Quickshell.Widgets
 import IslandBackend
@@ -8,6 +7,7 @@ Item {
     id: root
 
     signal controlPressed
+    property bool progressDragging: false
 
     readonly property var userConfig: UserConfig
 
@@ -29,8 +29,6 @@ Item {
     property int artMaxRetries: 10
 
     // ── Crossfade state ──
-    // _displayedSource: what's actually painted on screen right now (never set to "" mid-session)
-    // _loadingSource:   the URL currently being fetched into artLoader
     property string _displayedSource: ""
     property string _loadingSource: ""
 
@@ -43,10 +41,10 @@ Item {
     readonly property var _fullDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
     readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
+
     Component.onCompleted: {
         if (preloadedArtSource !== "") {
             _displayedSource = preloadedArtSource;
-            // Don't animate on first load — just show it instantly
             artWrapper.opacity = 1.0;
             artWrapper.scale = 1.0;
         } else if (currentArtUrl !== "") {
@@ -54,7 +52,6 @@ Item {
         }
     }
 
-    // ── Start loading a new URL (silently, into artLoader) ──
     function loadArt(url) {
         if (url === "" || url === _loadingSource || url === _displayedSource)
             return;
@@ -63,18 +60,13 @@ Item {
         _loadingSource = url;
     }
 
-    // ── Called when artLoader finishes — swap displayed source ──
     function _commitArt() {
         var wasEmpty = (_displayedSource === "");
-
         if (wasEmpty) {
             _displayedSource = _loadingSource;
             if (showCondition)
                 artEntranceAnim.restart();
-            // else: will fire when showCondition becomes true
         } else {
-            // Track change — flip animation. Don't swap _displayedSource yet;
-            // artFlipAnim swaps it at the midpoint while the card is edge-on.
             _pendingArtSource = _loadingSource;
             artFlipAnim.restart();
         }
@@ -85,21 +77,25 @@ Item {
         artRetryTimer.stop();
         if (currentArtUrl !== "")
             loadArt(currentArtUrl);
-        // If URL cleared (player stopped), leave _displayedSource as-is
-        // so we don't flash gray — keeps last art showing
     }
 
     onShowConditionChanged: {
         if (showCondition) {
             if (_displayedSource !== "") {
-                artEntranceAnim.restart();
+                if (!_artHasBeenShown) {
+                    _artHasBeenShown = true;
+                    artEntranceAnim.restart();
+                }
             } else if (preloadedArtSource !== "") {
                 _displayedSource = preloadedArtSource;
                 artWrapper.opacity = 1.0;
                 artWrapper.scale = 1.0;
+                _artHasBeenShown = true;
             } else if (currentArtUrl !== "") {
                 loadArt(currentArtUrl);
             }
+        } else {
+            _artHasBeenShown = false;
         }
     }
 
@@ -118,7 +114,6 @@ Item {
         }
     }
 
-    // ── Entrance: spring pop when art becomes visible for the first time ──
     ParallelAnimation {
         id: artEntranceAnim
         NumberAnimation {
@@ -140,17 +135,11 @@ Item {
         }
     }
 
-    // ── Track change: Y-axis card flip ──
-    // Phase 1: rotate 0→90  (flip out, card goes edge-on and invisible)
-    // Midpoint: swap _displayedSource while the card is edge-on (artSingle's
-    // source binding picks this up automatically — no direct id reference needed)
-    // Phase 2: rotate -90→0 (flip in, new art comes in from the other side)
     property real _flipAngle: 0.0
     property string _pendingArtSource: ""
 
     SequentialAnimation {
         id: artFlipAnim
-
         NumberAnimation {
             target: root
             property: "_flipAngle"
@@ -245,8 +234,6 @@ Item {
         }
     }
 
-    // ── Hidden loader — fetches art without showing gray ──
-    // Sits outside the visible tree so ClippingRectangle never renders it
     Image {
         id: artLoader
         visible: false
@@ -288,8 +275,6 @@ Item {
                 radius: 18
                 color: "#2c2c2e"
 
-                // Y-axis flip on track change. QtQuick's 3D Rotation transform
-                // applies perspective foreshortening automatically.
                 transform: Rotation {
                     origin.x: artCard.width / 2
                     origin.y: artCard.height / 2
@@ -312,7 +297,6 @@ Item {
                     cache: false
                 }
 
-                // Music note — only when nothing has ever loaded
                 Text {
                     anchors.centerIn: parent
                     visible: root._displayedSource === ""
@@ -397,6 +381,9 @@ Item {
                 property bool isHovered: false
                 property real dragProgress: 0
                 readonly property real displayProgress: isDragging ? dragProgress : trackProgress
+                property bool _artHasBeenShown: false
+
+                onIsDraggingChanged: root.progressDragging = isDragging
 
                 MouseArea {
                     id: seekMouseArea

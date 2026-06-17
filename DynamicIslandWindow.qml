@@ -78,11 +78,11 @@ PanelWindow {
     implicitHeight: root.overviewVisible ? Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(4 + root.overviewCapsuleHeight + 8), Math.ceil(root.controlCenterWindowHeight)) : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight))
     exclusiveZone: 45
     aboveWindows: true
-    focusable: islandContainer.appLauncherLayerVisible || islandContainer.wallpaperPickerLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
+    focusable: islandContainer.appLauncherLayerVisible || islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
 
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: {
-        if (islandContainer.wallpaperPickerLayerVisible)
+        if (islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible)
             return WlrKeyboardFocus.Exclusive;
         if (!root.monitorFocused)
             return WlrKeyboardFocus.None;
@@ -373,6 +373,7 @@ PanelWindow {
         property bool osdProgressAnimationEnabled: true
         property string osdCustomText: ""
         property int currentWs: root.currentMonitorWorkspaceId > 0 ? root.currentMonitorWorkspaceId : 1
+        property bool playerProgressDragging: false
         readonly property var controlCenterRef: controlCenterLoader.item
 
         readonly property int batteryCapacity: systemState.batteryCapacity
@@ -405,7 +406,7 @@ PanelWindow {
         readonly property int swipeAnimationDuration: 220
 
         // ── lock_unlock shtohet te blocksTransientSplit ──
-        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker" || islandState === "lock_unlock"
+        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker" || islandState === "clipboard_history" || islandState === "lock_unlock"
 
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
@@ -434,6 +435,7 @@ PanelWindow {
         readonly property string timeTotal: mediaController.timeTotal
         readonly property bool screenRecordingActive: root.screenRecordingActive
         readonly property bool wallpaperPickerLayerVisible: !root.overviewVisible && islandState === "wallpaper_picker"
+        readonly property bool clipboardHistoryLayerVisible: !root.overviewVisible && islandState === "clipboard_history"
         readonly property bool lockUnlockLayerVisible: !root.overviewVisible && islandState === "lock_unlock"
 
         readonly property var bluetoothDevices: bluetoothConnectionTracker.devices
@@ -1047,6 +1049,15 @@ PanelWindow {
             stopAutoHideTimer();
         }
 
+        function showClipboardHistory() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "clipboard_history";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
         // ── NEW: Lock Unlock ──────────────────────────────────────────────
         function showLockUnlock() {
             cancelSideSwipeSettle();
@@ -1209,6 +1220,8 @@ PanelWindow {
                     return 580;
                 case "wallpaper_picker":
                     return 1100;
+                case "clipboard_history":
+                    return 460;
                 case "expanded":
                     return 620;
                 case "bluetooth_expanded":
@@ -1237,6 +1250,8 @@ PanelWindow {
                     return 390;
                 case "wallpaper_picker":
                     return 260;
+                case "clipboard_history":
+                    return 390;
                 case "expanded":
                     return 192;
                 case "bluetooth_expanded":
@@ -1262,6 +1277,8 @@ PanelWindow {
                 case "app_launcher":
                     return 34;
                 case "wallpaper_picker":
+                    return 34;
+                case "clipboard_history":
                     return 34;
                 case "expanded":
                     return 40;
@@ -1362,6 +1379,27 @@ PanelWindow {
                 enabled: !root.overviewVisible && twoFingerTouchArea.touchPoints.length < 2
                 acceptedButtons: root.dynamicIslandAcceptedButtons
                 preventStealing: true
+                hoverEnabled: true
+
+                onEntered: {
+                    hoverCloseTimer.stop();
+                    if (islandContainer.islandState === "normal" || islandContainer.islandState === "custom" || islandContainer.islandState === "lyrics")
+                        islandContainer.showExpandedPlayer(false);
+                }
+                onExited: {
+                    if (islandContainer.islandState === "expanded" && islandContainer.expandedByPlayerAutoOpen === false && !islandContainer.playerProgressDragging)
+                        hoverCloseTimer.restart();
+                }
+
+                Timer {
+                    id: hoverCloseTimer
+                    interval: 300
+                    repeat: false
+                    onTriggered: {
+                        if (islandContainer.islandState === "expanded" && islandContainer.expandedByPlayerAutoOpen === false && !islandContainer.playerProgressDragging)
+                            islandContainer.smartRestoreState();
+                    }
+                }
                 property real swipeStartX: 0
                 property real swipeStartY: 0
                 property real swipeStartProgress: 0
@@ -1666,6 +1704,11 @@ PanelWindow {
                 asynchronous: false
                 visible: islandContainer.expandedLayerVisible
                 anchors.fill: parent
+                onLoaded: {
+                    if (item && item.children) {
+                        // bind playerProgressDragging to the inner ExpandedPlayerLayer
+                    }
+                }
                 sourceComponent: Component {
                     NookTrayLayer {
                         currentArtUrl: islandContainer.currentArtUrl
@@ -1681,6 +1724,7 @@ PanelWindow {
                         showCondition: islandContainer.expandedLayerVisible
                         onControlPressed: islandContainer.suppressCapsuleClick()
                         onSettingsPressed: islandContainer.showControlCenter()
+                        onProgressDraggingChanged: islandContainer.playerProgressDragging = progressDragging
                     }
                 }
             }
@@ -1771,6 +1815,24 @@ PanelWindow {
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         showCondition: islandContainer.wallpaperPickerLayerVisible
+                        onCloseRequested: islandContainer.smartRestoreState()
+                    }
+                }
+            }
+
+            Loader {
+                id: clipboardHistoryLoader
+                anchors.fill: parent
+                property bool keepAlive: false
+                active: islandContainer.clipboardHistoryLayerVisible || keepAlive
+                onLoaded: keepAlive = true
+                asynchronous: false
+                visible: islandContainer.clipboardHistoryLayerVisible
+                sourceComponent: Component {
+                    ClipboardHistoryLayer {
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        showCondition: islandContainer.clipboardHistoryLayerVisible
                         onCloseRequested: islandContainer.smartRestoreState()
                     }
                 }
