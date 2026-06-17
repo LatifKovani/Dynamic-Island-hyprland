@@ -34,7 +34,60 @@ Item {
             return lyricsLookupArtist;
         return "Unknown";
     }
-    readonly property string currentArtUrl: activePlayer ? (activePlayer.trackArtUrl || activePlayer.artUrl || "") : ""
+
+    // ── Art URL me filter ──
+    readonly property string _rawArtUrl: activePlayer ? (activePlayer.trackArtUrl || activePlayer.artUrl || "") : ""
+    readonly property string currentArtUrl: isRealArt(_rawArtUrl) ? _rawArtUrl : _lastGoodArtUrl
+
+    property string _lastGoodArtUrl: ""
+
+    onCurrentTrackChanged: {
+        // Track i ri — reseto artin e fundit të mirë
+        _lastGoodArtUrl = "";
+    }
+
+    on_RawArtUrlChanged: {
+        if (_rawArtUrl !== "" && isRealArt(_rawArtUrl))
+            _lastGoodArtUrl = _rawArtUrl;
+    }
+
+    // ── Kontrollon nëse URL-ja është art i vërtetë (jo ikonë aplikacioni) ──
+    function isRealArt(url) {
+        if (!url || url === "")
+            return false;
+        const lower = url.toLowerCase();
+
+        // ── URL-të http/https janë gjithmonë art i vërtetë (YouTube, Spotify, etj.) ──
+        if (lower.startsWith("http://") || lower.startsWith("https://"))
+            return true;
+
+        // ── File lokale: vetëm cache MPRIS është art i vërtetë ──
+        // Quickshell/MPRIS cache zakonisht ruhet në /tmp ose ~/.cache
+        if (lower.startsWith("file://")) {
+            if (lower.indexOf("/tmp/") !== -1)
+                return true;
+            if (lower.indexOf("/.cache/") !== -1)
+                return true;
+            if (lower.indexOf("/cache/") !== -1)
+                return true;
+            if (lower.indexOf("mpris") !== -1)
+                return true;
+            if (lower.indexOf("albumart") !== -1)
+                return true;
+            if (lower.indexOf("coverart") !== -1)
+                return true;
+            // Çdo gjë tjetër file:// (ikona app nga /usr, /opt, etj.) — injoro
+            return false;
+        }
+
+        // ── Path absolute pa file:// (p.sh. /usr/share/icons/...) — injoro ──
+        if (lower.startsWith("/"))
+            return false;
+
+        // ── Të tjera (data: URIs, etj.) — lejo ──
+        return true;
+    }
+
     readonly property string inlineLyricsRaw: {
         if (!activePlayer || !activePlayer.metadata)
             return "";
@@ -61,15 +114,24 @@ Item {
         });
     }
 
-    onInlineLyricsRawChanged: updatePlainLyric()
+    // ── Kur lista e playereve ndryshon, kontrollo nese remembered player ka dale ──
+    onPlayersListChanged: {
+        if (!lastActivePlayerDbusName)
+            return;
+        const stillExists = findPlayerByDbusName(lastActivePlayerDbusName);
+        if (!stillExists) {
+            lastActivePlayerDbusName = "";
+            _lastGoodArtUrl = "";
+        }
+    }
 
+    onInlineLyricsRawChanged: updatePlainLyric()
     Component.onCompleted: updatePlainLyric()
 
     function formatTime(value) {
         const numberValue = Number(value);
         if (isNaN(numberValue) || numberValue <= 0)
             return "0:00";
-
         let totalSeconds = 0;
         if (numberValue < 10000)
             totalSeconds = Math.floor(numberValue);
@@ -77,7 +139,6 @@ Item {
             totalSeconds = Math.floor(numberValue / 1000);
         else
             totalSeconds = Math.floor(numberValue / 1000000);
-
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = Math.floor(totalSeconds % 60);
         return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
@@ -90,31 +151,25 @@ Item {
     function extractFirstPlainLyric(rawLyrics) {
         const source = String(rawLyrics === undefined || rawLyrics === null ? "" : rawLyrics);
         let lineStart = 0;
-
         for (let index = 0; index <= source.length; index++) {
             if (index < source.length && source[index] !== "\n" && source[index] !== "\r")
                 continue;
-
             const row = source.slice(lineStart, index).trim();
             if (row !== "" && !/^\[[a-zA-Z]+:.*\]$/.test(row)) {
                 const lineText = cleanLyricLineText(row.replace(/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g, ""));
                 if (lineText !== "")
                     return lineText;
             }
-
             if (source[index] === "\r" && source[index + 1] === "\n")
                 index++;
-
             lineStart = index + 1;
         }
-
         return "";
     }
 
     function updatePlainLyric() {
         if (inlineLyricsRaw === _lastParsedInlineLyricsRaw)
             return;
-
         _lastParsedInlineLyricsRaw = inlineLyricsRaw;
         plainLyric = extractFirstPlainLyric(inlineLyricsRaw);
     }
@@ -142,32 +197,26 @@ Item {
     function resolveActivePlayer() {
         if (!playersList || playersList.length === 0)
             return null;
-
         for (let index = 0; index < playersList.length; index++) {
             if (playersList[index].playbackState === MprisPlaybackState.Playing)
                 return playersList[index];
         }
-
         const rememberedPlayer = findPlayerByDbusName(lastActivePlayerDbusName);
-        if (rememberedPlayer && (playerHasTrackInfo(rememberedPlayer) || rememberedPlayer.canControl))
+        if (rememberedPlayer && rememberedPlayer.playbackState !== MprisPlaybackState.Stopped && (playerHasTrackInfo(rememberedPlayer) || rememberedPlayer.canControl))
             return rememberedPlayer;
-
         for (let index = 0; index < playersList.length; index++) {
             if (playersList[index].playbackState === MprisPlaybackState.Paused && playerHasTrackInfo(playersList[index]))
                 return playersList[index];
         }
-
         for (let index = 0; index < playersList.length; index++) {
             if (playersList[index].canControl)
                 return playersList[index];
         }
-
         return playersList[0];
     }
 
     QtObject {
         id: lyricsBridge
-
         readonly property string title: root.currentTrack
         readonly property string currentLyric: SysBackend && SysBackend.lyricsCurrentLyric !== undefined ? SysBackend.lyricsCurrentLyric : ""
         readonly property bool isSynced: SysBackend && SysBackend.lyricsIsSynced !== undefined ? SysBackend.lyricsIsSynced : false
@@ -188,21 +237,17 @@ Item {
 
     Timer {
         id: progressPoller
-
         interval: 500
         running: root.activePlayer !== null && root.expanded
         repeat: true
-
         onTriggered: {
             let player = root.activePlayer;
             if (!player)
                 return;
-
             const currentPosition = Number(player.position) || 0;
             let totalLength = Number(player.length) || 0;
             if (totalLength <= 0 && player.metadata && player.metadata["mpris:length"])
                 totalLength = Number(player.metadata["mpris:length"]);
-
             if (totalLength > 0) {
                 root.trackProgress = currentPosition / totalLength;
                 root.timePlayed = root.formatTime(currentPosition);

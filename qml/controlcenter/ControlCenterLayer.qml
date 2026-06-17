@@ -1139,18 +1139,14 @@ Item {
                                 anchors.top: parent.top
                                 anchors.bottom: parent.bottom
                                 anchors.left: parent.left
-                                radius: parent.parent.outerR
+                                radius: 0
+                                topLeftRadius: parent.parent.outerR
+                                bottomLeftRadius: parent.parent.outerR
+                                topRightRadius: batteryCapacity >= 89 ? parent.parent.outerR : 0
+                                bottomRightRadius: batteryCapacity >= 89 ? parent.parent.outerR : 0
                                 width: isCharging ? parent.width : Math.max(parent.parent.outerR * 2, parent.width * (batteryCapacity / 100.0))
                                 color: parent.parent.bodyColor
 
-                                Rectangle {
-                                    visible: !isCharging && batteryCapacity < 100
-                                    anchors.top: parent.top
-                                    anchors.bottom: parent.bottom
-                                    anchors.right: parent.right
-                                    width: parent.parent.parent.outerR
-                                    color: parent.color
-                                }
                                 Behavior on width {
                                     NumberAnimation {
                                         duration: 300
@@ -1186,7 +1182,6 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
                             }
-                            // Discharging: number inside
                             Text {
                                 visible: !isCharging
                                 anchors.centerIn: parent
@@ -1194,7 +1189,7 @@ Item {
                                 color: batteryCapacity <= 20 ? "white" : "black"
                                 font.pixelSize: 13
                                 font.family: textFontFamily
-                                font.weight: Font.DemiBold
+                                font.weight: batteryCapacity <= 20 ? Font.Bold : Font.DemiBold
                                 z: 2
                             }
                         }

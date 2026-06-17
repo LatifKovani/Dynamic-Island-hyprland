@@ -161,13 +161,7 @@ Item {
                                 return "#ff3b30";
                             return "white";
                         }
-                        readonly property color emptyColor: {
-                            if (charging)
-                                return Qt.rgba(1, 1, 1, 0.56);
-                            if (level <= 20)
-                                return Qt.rgba(1, 0.23, 0.19, 0.3);
-                            return Qt.rgba(1, 1, 1, 0.56);
-                        }
+                        readonly property color emptyColor: Qt.rgba(1, 1, 1, 0.56)   // always the same
 
                         Rectangle {
                             id: batteryBody
@@ -185,18 +179,13 @@ Item {
                                 anchors.top: parent.top
                                 anchors.bottom: parent.bottom
                                 anchors.left: parent.left
-                                radius: root.batteryOuterRadius
+                                radius: 0
+                                topLeftRadius: root.batteryOuterRadius
+                                bottomLeftRadius: root.batteryOuterRadius
+                                topRightRadius: batteryShape.level >= 87 ? root.batteryOuterRadius : 0
+                                bottomRightRadius: batteryShape.level >= 87 ? root.batteryOuterRadius : 0
                                 width: batteryShape.charging ? parent.width : Math.max(root.batteryOuterRadius * 2, parent.width * (batteryShape.level / 100.0))
                                 color: batteryShape.bodyColor
-
-                                Rectangle {
-                                    visible: !batteryShape.charging && batteryShape.level < 100
-                                    anchors.top: parent.top
-                                    anchors.bottom: parent.bottom
-                                    anchors.right: parent.right
-                                    width: root.batteryOuterRadius * Math.min(1, (100 - batteryShape.level) / 10.0)
-                                    color: parent.color
-                                }
 
                                 Behavior on width {
                                     NumberAnimation {
@@ -246,7 +235,7 @@ Item {
                                 color: batteryShape.level <= 20 ? "white" : "black"
                                 font.pixelSize: root.batteryFontSize
                                 font.family: root.textFontFamily
-                                font.weight: Font.DemiBold
+                                font.weight: batteryShape.level <= 20 ? Font.Bold : Font.DemiBold
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 z: 2
