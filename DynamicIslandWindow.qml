@@ -363,7 +363,7 @@ PanelWindow {
         anchors.fill: parent
         focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.appLauncherLayerVisible || islandContainer.powerMenuLayerVisible)
 
-        property real lockUnlockCapsuleWidth: 140
+        property real lockUnlockCapsuleWidth: 170
         property bool lockUnlockResetting: false
         property bool skipWidthAnimation: false
         property string islandState: "lock_unlock"
@@ -1064,10 +1064,13 @@ PanelWindow {
             abortSideTransientMode();
             clearTransientCapsule();
             lockUnlockResetting = false;
-            skipWidthAnimation = false;
+            skipWidthAnimation = true;
             islandState = "lock_unlock";
             mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
             stopAutoHideTimer();
+            Qt.callLater(function () {
+                islandContainer.skipWidthAnimation = false;
+            });
         }
 
         function resetLockUnlockCapsule() {
@@ -1075,7 +1078,7 @@ PanelWindow {
                 return;
             lockUnlockResetting = true;
             skipWidthAnimation = true;
-            lockUnlockCapsuleWidth = 140;
+            lockUnlockCapsuleWidth = 170;
             lockUnlockResetTimer.restart();
         }
 
@@ -1856,9 +1859,6 @@ PanelWindow {
                 }
                 onLoaded: {
                     if (item) {
-                        item.requestCapsuleWidth.connect(function (w) {
-                            islandContainer.lockUnlockCapsuleWidth = w;
-                        });
                         unlockStartDelay.restart();
                     }
                 }

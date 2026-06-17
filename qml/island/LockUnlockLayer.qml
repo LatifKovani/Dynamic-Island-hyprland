@@ -8,7 +8,6 @@ Item {
     property bool showCondition: false
 
     signal animationFinished
-    signal requestCapsuleWidth(real w)
 
     property bool unlocked: false
 
@@ -51,11 +50,6 @@ Item {
     SequentialAnimation {
         id: unlockSequence
 
-        // After pop-in, grow the pill
-        ScriptAction {
-            script: root.requestCapsuleWidth(170)
-        }
-
         PauseAnimation {
             duration: 300
         }
@@ -63,11 +57,6 @@ Item {
         // Swap icon
         ScriptAction {
             script: root.unlocked = true
-        }
-
-        // Shrink back
-        ScriptAction {
-            script: root.requestCapsuleWidth(140)
         }
 
         PauseAnimation {

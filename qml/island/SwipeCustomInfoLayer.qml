@@ -154,6 +154,7 @@ Item {
 
                         readonly property real level: Math.max(0, Math.min(100, Number(modelData.level || 0)))
                         readonly property bool charging: modelData.isCharging || false
+                        readonly property bool roundedEnd: level >= 85
                         readonly property color bodyColor: {
                             if (charging)
                                 return "white";
@@ -182,9 +183,9 @@ Item {
                                 radius: 0
                                 topLeftRadius: root.batteryOuterRadius
                                 bottomLeftRadius: root.batteryOuterRadius
-                                topRightRadius: batteryShape.level >= 87 ? root.batteryOuterRadius : 0
-                                bottomRightRadius: batteryShape.level >= 87 ? root.batteryOuterRadius : 0
-                                width: batteryShape.charging ? parent.width : Math.max(root.batteryOuterRadius * 2, parent.width * (batteryShape.level / 100.0))
+                                topRightRadius: batteryShape.roundedEnd ? root.batteryOuterRadius : 0
+                                bottomRightRadius: batteryShape.roundedEnd ? root.batteryOuterRadius : 0
+                                width: Math.max(root.batteryOuterRadius * 2, parent.width * (batteryShape.level / 100.0))
                                 color: batteryShape.bodyColor
 
                                 Behavior on width {

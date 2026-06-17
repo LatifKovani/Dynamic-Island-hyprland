@@ -1122,6 +1122,7 @@ Item {
                         height: bh
                         anchors.verticalCenter: parent.verticalCenter
 
+                        readonly property bool roundedEnd: batteryCapacity >= 85
                         readonly property color bodyColor: batteryCapacity <= 20 ? StyleTokens.danger : StyleTokens.white
                         readonly property color emptyColor: Qt.rgba(1, 1, 1, 0.56)
 
@@ -1142,9 +1143,9 @@ Item {
                                 radius: 0
                                 topLeftRadius: parent.parent.outerR
                                 bottomLeftRadius: parent.parent.outerR
-                                topRightRadius: batteryCapacity >= 89 ? parent.parent.outerR : 0
-                                bottomRightRadius: batteryCapacity >= 89 ? parent.parent.outerR : 0
-                                width: isCharging ? parent.width : Math.max(parent.parent.outerR * 2, parent.width * (batteryCapacity / 100.0))
+                                topRightRadius: parent.parent.roundedEnd ? parent.parent.outerR : 0
+                                bottomRightRadius: parent.parent.roundedEnd ? parent.parent.outerR : 0
+                                width: Math.max(parent.parent.outerR * 2, parent.width * (batteryCapacity / 100.0))
                                 color: parent.parent.bodyColor
 
                                 Behavior on width {
