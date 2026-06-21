@@ -17,6 +17,7 @@ Item {
     property string dateText: "Mon, Jan 01"
     property int currentWorkspace: 1
     property bool customSwipeActive: false
+    property bool musicActive: false
     property real _ramTotalGb: 0
     property real _ramUsedGb: 0
     property var _notifiedMilestones: ({})
@@ -71,6 +72,7 @@ Item {
     }
     onUsesCavaModuleChanged: updateCavaSubscription()
     onCustomSwipeActiveChanged: updateCavaSubscription()
+    onMusicActiveChanged: updateCavaSubscription()
     onBatteryCapacityChanged: syncCustomLeftItems()
     onIsChargingChanged: syncCustomLeftItems()
     onCurrentVolumeChanged: syncCustomLeftItems()
@@ -210,7 +212,7 @@ Item {
     }
 
     function updateCavaSubscription() {
-        const active = usesCavaModule && customSwipeActive;
+        const active = musicActive || (usesCavaModule && customSwipeActive);
         SystemServices.setCavaClientActive(systemServicesClientId, active);
         if (active)
             cavaLevels = SystemServices.cavaLevels;
