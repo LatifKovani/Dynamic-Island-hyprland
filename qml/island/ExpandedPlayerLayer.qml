@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Widgets
 import IslandBackend
 import Quickshell.Services.Mpris
+import Qt5Compat.GraphicalEffects
 
 Item {
     id: root
@@ -269,41 +270,43 @@ Item {
             scale: 1.0
             transformOrigin: Item.Center
 
-            ClippingRectangle {
-                id: artCard
+            // Mask for rounded corners
+            Rectangle {
+                id: artMask
                 anchors.fill: parent
                 radius: 18
-                color: "#2c2c2e"
+                visible: false
+            }
 
-                transform: Rotation {
-                    origin.x: artCard.width / 2
-                    origin.y: artCard.height / 2
-                    axis {
-                        x: 0
-                        y: 1
-                        z: 0
-                    }
-                    angle: root._flipAngle
+            // Album art image with opacity mask
+            Image {
+                id: artSingle
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectCrop
+                source: root._displayedSource
+                sourceSize: Qt.size(192, 192)
+                smooth: true
+                mipmap: true
+                cache: true
+                layer.enabled: true
+                layer.effect: OpacityMask {
+                    maskSource: artMask
                 }
+            }
 
-                Image {
-                    id: artSingle
-                    anchors.fill: parent
-                    fillMode: Image.PreserveAspectCrop
-                    source: root._displayedSource
-                    sourceSize: Qt.size(192, 192)
-                    smooth: true
-                    mipmap: true
-                    cache: false
-                }
-
+            // Fallback when no art or load error
+            Rectangle {
+                anchors.fill: parent
+                radius: 18
+                color: "#2a2a2a"
+                visible: artSingle.status !== Image.Ready
                 Text {
                     anchors.centerIn: parent
-                    visible: root._displayedSource === ""
                     text: "\uf001"
                     font.family: iconFontFamily
                     font.pixelSize: 24
-                    color: Qt.rgba(1, 1, 1, 0.2)
+                    color: "#ffffff"
+                    opacity: 0.6
                 }
             }
         }
