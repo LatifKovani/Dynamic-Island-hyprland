@@ -292,6 +292,17 @@ Item {
                 layer.effect: OpacityMask {
                     maskSource: artMask
                 }
+                // Apply flip rotation using root._flipAngle
+                transform: Rotation {
+                    origin.x: artSingle.width / 2
+                    origin.y: artSingle.height / 2
+                    axis {
+                        x: 0
+                        y: 1
+                        z: 0
+                    }
+                    angle: root._flipAngle
+                }
             }
 
             // Fallback when no art or load error
