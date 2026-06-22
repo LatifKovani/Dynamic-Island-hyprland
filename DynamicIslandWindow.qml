@@ -976,7 +976,8 @@ PanelWindow {
             notificationSummary = resolvedSummary;
             notificationBody = cleanedSummary !== "" ? cleanedBody : "";
             islandState = "notification";
-            restartAutoHideTimer(notificationAutoHideInterval);
+            const isPomodoro = cleanedAppName.toLowerCase().includes("pomodoro");
+            restartAutoHideTimer(isPomodoro ? notificationAutoHideInterval : defaultAutoHideInterval);
         }
 
         function suppressCapsuleClick() {
@@ -1850,8 +1851,15 @@ PanelWindow {
                 visible: islandContainer.expandedLayerVisible
                 anchors.fill: parent
                 onLoaded: {
-                    if (item && item.children) {
-                        // bind playerProgressDragging to the inner ExpandedPlayerLayer
+                    if (item) {
+                        item.pomodoroFinished.connect(function (summary, body) {
+                            islandContainer.notificationAppName = "Pomodoro";
+                            islandContainer.notificationSummary = summary;
+                            islandContainer.notificationBody = body;
+                            islandContainer.notificationImagePath = "";
+                            islandContainer.islandState = "notification";
+                            islandContainer.restartAutoHideTimer(islandContainer.notificationAutoHideInterval);
+                        });
                     }
                     keepAlive = true;
                 }

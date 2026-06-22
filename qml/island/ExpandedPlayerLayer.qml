@@ -3,6 +3,7 @@ import Quickshell.Widgets
 import IslandBackend
 import Quickshell.Services.Mpris
 import Qt5Compat.GraphicalEffects
+import QtQuick.LocalStorage
 
 Item {
     id: root
@@ -11,6 +12,10 @@ Item {
     property bool progressDragging: false
 
     readonly property var userConfig: UserConfig
+    // Simple local storage for persisting last displayed album art across sessions
+    function db() {
+        return LocalStorage.openDatabaseSync("QuickshellAlbumArt", "1.0", "Last album art", 1000);
+    }
 
     property bool showCondition: false
     property string currentArtUrl: ""
@@ -44,6 +49,8 @@ Item {
     readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
 
     Component.onCompleted: {
+        // Restore any previously saved album art URL
+        restoreLastArt();
         if (preloadedArtSource !== "") {
             _displayedSource = preloadedArtSource;
             artWrapper.opacity = 1.0;
@@ -71,6 +78,26 @@ Item {
             _pendingArtSource = _loadingSource;
             artFlipAnim.restart();
         }
+        // Persist the displayed art URL after a successful commit
+        saveLastArt();
+    }
+
+    // Persist the currently displayed album art URL
+    function saveLastArt() {
+        db().transaction(function (tx) {
+            tx.executeSql("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)");
+            tx.executeSql("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ["lastArt", _displayedSource]);
+        });
+    }
+
+    // Restore saved art URL on startup
+    function restoreLastArt() {
+        db().transaction(function (tx) {
+            const rs = tx.executeSql("SELECT value FROM settings WHERE key='lastArt'");
+            if (rs.rows.length) {
+                _displayedSource = rs.rows.item(0).value;
+            }
+        });
     }
 
     onCurrentArtUrlChanged: {
