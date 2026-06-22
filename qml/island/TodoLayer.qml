@@ -209,8 +209,12 @@ Item {
                         MouseArea {
                             id: delMouse
                             anchors.fill: parent
-                            anchors.margins: -4
-                            hoverEnabled: true
+                            anchors.margins: 0
+                            hoverEnabled: false
+                            preventStealing: true
+                            propagateComposedEvents: false
+                            cursorShape: Qt.PointingHandCursor
+                            onPressed: { event.accepted = true }
                             onClicked: removeTodo(index)
                         }
                     }

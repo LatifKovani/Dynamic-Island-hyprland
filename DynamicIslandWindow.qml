@@ -401,7 +401,7 @@ PanelWindow {
         property real lyricsCapsuleWidth: 220
         property bool sideSwipeSettling: false
         readonly property int defaultAutoHideInterval: 1250
-        readonly property int notificationAutoHideInterval: 4200
+        readonly property int notificationAutoHideInterval: 86400000
         readonly property int bluetoothExpandedAutoHideInterval: 2500
         readonly property int swipeAnimationDuration: 220
 
@@ -1853,7 +1853,7 @@ PanelWindow {
                     if (item && item.children) {
                         // bind playerProgressDragging to the inner ExpandedPlayerLayer
                     }
-                    keepAlive = true
+                    keepAlive = true;
                 }
                 sourceComponent: Component {
                     NookTrayLayer {
