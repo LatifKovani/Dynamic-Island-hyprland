@@ -1,0 +1,11 @@
+--bare
+-I
+/home/latif/.config/Tide-island/build
+-I
+/home/latif/.config/Tide-island/build
+-I
+/usr/lib/qt6/qml
+--resource
+/home/latif/.config/Tide-island/build/.qt/rcc/qmake_IslandBackend.qrc
+--json
+/home/latif/.config/Tide-island/build/IslandBackend_qmllint.json

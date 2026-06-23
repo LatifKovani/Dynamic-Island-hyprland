@@ -1,0 +1,19 @@
+{
+    "classes": [
+        {
+            "className": "WifiNetworkModel",
+            "final": true,
+            "lineNumber": 7,
+            "object": true,
+            "qualifiedClassName": "WifiNetworkModel",
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QAbstractListModel"
+                }
+            ]
+        }
+    ],
+    "inputFile": "WifiNetworkModel.h",
+    "outputRevision": 69
+}

@@ -1,0 +1,688 @@
+{
+    "classes": [
+        {
+            "classInfos": [
+                {
+                    "name": "QML.Element",
+                    "value": "UserConfig"
+                },
+                {
+                    "name": "QML.Singleton",
+                    "value": "true"
+                }
+            ],
+            "className": "UserConfigBackend",
+            "final": true,
+            "lineNumber": 9,
+            "methods": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "button",
+                            "type": "QVariant"
+                        }
+                    ],
+                    "index": 25,
+                    "isConst": true,
+                    "lineNumber": 78,
+                    "name": "mouseButton",
+                    "returnType": "int"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "buttons",
+                            "type": "QVariant"
+                        }
+                    ],
+                    "index": 26,
+                    "isConst": true,
+                    "lineNumber": 79,
+                    "name": "mouseButtonsMask",
+                    "returnType": "int"
+                },
+                {
+                    "access": "public",
+                    "index": 27,
+                    "lineNumber": 80,
+                    "name": "reload",
+                    "returnType": "void"
+                }
+            ],
+            "object": true,
+            "properties": [
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": true,
+                    "index": 0,
+                    "lineNumber": 14,
+                    "name": "userConfigPath",
+                    "override": false,
+                    "read": "userConfigPath",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 1,
+                    "lineNumber": 15,
+                    "name": "configError",
+                    "notify": "configErrorChanged",
+                    "override": false,
+                    "read": "configError",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 2,
+                    "lineNumber": 16,
+                    "name": "defaultWallpaperPath",
+                    "notify": "defaultWallpaperPathChanged",
+                    "override": false,
+                    "read": "defaultWallpaperPath",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false,
+                    "write": "setDefaultWallpaperPath"
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 3,
+                    "lineNumber": 17,
+                    "name": "defaultTlpSudoPassword",
+                    "notify": "defaultTlpSudoPasswordChanged",
+                    "override": false,
+                    "read": "defaultTlpSudoPassword",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false,
+                    "write": "setDefaultTlpSudoPassword"
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 4,
+                    "lineNumber": 19,
+                    "name": "wallpaperPath",
+                    "notify": "wallpaperPathChanged",
+                    "override": false,
+                    "read": "wallpaperPath",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 5,
+                    "lineNumber": 20,
+                    "name": "iconFontFamily",
+                    "notify": "iconFontFamilyChanged",
+                    "override": false,
+                    "read": "iconFontFamily",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 6,
+                    "lineNumber": 21,
+                    "name": "textFontFamily",
+                    "notify": "textFontFamilyChanged",
+                    "override": false,
+                    "read": "textFontFamily",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 7,
+                    "lineNumber": 22,
+                    "name": "heroFontFamily",
+                    "notify": "heroFontFamilyChanged",
+                    "override": false,
+                    "read": "heroFontFamily",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 8,
+                    "lineNumber": 23,
+                    "name": "timeFontFamily",
+                    "notify": "timeFontFamilyChanged",
+                    "override": false,
+                    "read": "timeFontFamily",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 9,
+                    "lineNumber": 24,
+                    "name": "tlpSudoPassword",
+                    "notify": "tlpSudoPasswordChanged",
+                    "override": false,
+                    "read": "tlpSudoPassword",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 10,
+                    "lineNumber": 25,
+                    "name": "tlpPermissionMode",
+                    "notify": "tlpPermissionModeChanged",
+                    "override": false,
+                    "read": "tlpPermissionMode",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 11,
+                    "lineNumber": 27,
+                    "name": "overviewGlobalShortcutAppid",
+                    "notify": "overviewGlobalShortcutAppidChanged",
+                    "override": false,
+                    "read": "overviewGlobalShortcutAppid",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 12,
+                    "lineNumber": 28,
+                    "name": "overviewGlobalShortcutName",
+                    "notify": "overviewGlobalShortcutNameChanged",
+                    "override": false,
+                    "read": "overviewGlobalShortcutName",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 13,
+                    "lineNumber": 30,
+                    "name": "workspaceOverviewWindowDragButton",
+                    "notify": "workspaceOverviewWindowDragButtonChanged",
+                    "override": false,
+                    "read": "workspaceOverviewWindowDragButton",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 14,
+                    "lineNumber": 32,
+                    "name": "dynamicIslandPrimaryButton",
+                    "notify": "dynamicIslandPrimaryButtonChanged",
+                    "override": false,
+                    "read": "dynamicIslandPrimaryButton",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 15,
+                    "lineNumber": 33,
+                    "name": "dynamicIslandPrimaryAction",
+                    "notify": "dynamicIslandPrimaryActionChanged",
+                    "override": false,
+                    "read": "dynamicIslandPrimaryAction",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 16,
+                    "lineNumber": 34,
+                    "name": "dynamicIslandSecondaryButton",
+                    "notify": "dynamicIslandSecondaryButtonChanged",
+                    "override": false,
+                    "read": "dynamicIslandSecondaryButton",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 17,
+                    "lineNumber": 35,
+                    "name": "dynamicIslandSecondaryAction",
+                    "notify": "dynamicIslandSecondaryActionChanged",
+                    "override": false,
+                    "read": "dynamicIslandSecondaryAction",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 18,
+                    "lineNumber": 36,
+                    "name": "dynamicIslandLeftSwipeItems",
+                    "notify": "dynamicIslandLeftSwipeItemsChanged",
+                    "override": false,
+                    "read": "dynamicIslandLeftSwipeItems",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantList",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 19,
+                    "lineNumber": 37,
+                    "name": "disableAutoExpandOnTrackChange",
+                    "notify": "disableAutoExpandOnTrackChangeChanged",
+                    "override": false,
+                    "read": "disableAutoExpandOnTrackChange",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 20,
+                    "lineNumber": 39,
+                    "name": "islandWidth",
+                    "notify": "islandWidthChanged",
+                    "override": false,
+                    "read": "islandWidth",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 21,
+                    "lineNumber": 40,
+                    "name": "islandHeight",
+                    "notify": "islandHeightChanged",
+                    "override": false,
+                    "read": "islandHeight",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 22,
+                    "lineNumber": 41,
+                    "name": "islandPositionX",
+                    "notify": "islandPositionXChanged",
+                    "override": false,
+                    "read": "islandPositionX",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 23,
+                    "lineNumber": 42,
+                    "name": "bodyFontSize",
+                    "notify": "bodyFontSizeChanged",
+                    "override": false,
+                    "read": "bodyFontSize",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 24,
+                    "lineNumber": 43,
+                    "name": "titleFontSize",
+                    "notify": "titleFontSizeChanged",
+                    "override": false,
+                    "read": "titleFontSize",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 25,
+                    "lineNumber": 44,
+                    "name": "iconFontSize",
+                    "notify": "iconFontSizeChanged",
+                    "override": false,
+                    "read": "iconFontSize",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                }
+            ],
+            "qualifiedClassName": "UserConfigBackend",
+            "signals": [
+                {
+                    "access": "public",
+                    "index": 0,
+                    "lineNumber": 83,
+                    "name": "configErrorChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 1,
+                    "lineNumber": 84,
+                    "name": "defaultWallpaperPathChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 2,
+                    "lineNumber": 85,
+                    "name": "defaultTlpSudoPasswordChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 3,
+                    "lineNumber": 86,
+                    "name": "wallpaperPathChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 4,
+                    "lineNumber": 87,
+                    "name": "iconFontFamilyChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 5,
+                    "lineNumber": 88,
+                    "name": "textFontFamilyChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 6,
+                    "lineNumber": 89,
+                    "name": "heroFontFamilyChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 7,
+                    "lineNumber": 90,
+                    "name": "timeFontFamilyChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 8,
+                    "lineNumber": 91,
+                    "name": "tlpSudoPasswordChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 9,
+                    "lineNumber": 92,
+                    "name": "tlpPermissionModeChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 10,
+                    "lineNumber": 93,
+                    "name": "overviewGlobalShortcutAppidChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 11,
+                    "lineNumber": 94,
+                    "name": "overviewGlobalShortcutNameChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 12,
+                    "lineNumber": 95,
+                    "name": "workspaceOverviewWindowDragButtonChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 13,
+                    "lineNumber": 96,
+                    "name": "dynamicIslandPrimaryButtonChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 14,
+                    "lineNumber": 97,
+                    "name": "dynamicIslandPrimaryActionChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 15,
+                    "lineNumber": 98,
+                    "name": "dynamicIslandSecondaryButtonChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 16,
+                    "lineNumber": 99,
+                    "name": "dynamicIslandSecondaryActionChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 17,
+                    "lineNumber": 100,
+                    "name": "dynamicIslandLeftSwipeItemsChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 18,
+                    "lineNumber": 101,
+                    "name": "disableAutoExpandOnTrackChangeChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 19,
+                    "lineNumber": 102,
+                    "name": "islandWidthChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 20,
+                    "lineNumber": 103,
+                    "name": "islandHeightChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 21,
+                    "lineNumber": 104,
+                    "name": "islandPositionXChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 22,
+                    "lineNumber": 105,
+                    "name": "bodyFontSizeChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 23,
+                    "lineNumber": 106,
+                    "name": "titleFontSizeChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 24,
+                    "lineNumber": 107,
+                    "name": "iconFontSizeChanged",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "UserConfigBackend.h",
+    "outputRevision": 69
+}

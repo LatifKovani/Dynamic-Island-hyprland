@@ -1,0 +1,467 @@
+{
+    "classes": [
+        {
+            "classInfos": [
+                {
+                    "name": "QML.Element",
+                    "value": "auto"
+                },
+                {
+                    "name": "QML.Singleton",
+                    "value": "true"
+                }
+            ],
+            "className": "SystemServices",
+            "final": true,
+            "lineNumber": 15,
+            "methods": [
+                {
+                    "access": "public",
+                    "index": 11,
+                    "lineNumber": 29,
+                    "name": "requestScreenRecordingSnapshot",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "requestId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "subject",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 12,
+                    "lineNumber": 30,
+                    "name": "requestHyprlandSnapshot",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "sourcePath",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "cachePath",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "cacheDir",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "targetWidth",
+                            "type": "int"
+                        },
+                        {
+                            "name": "targetHeight",
+                            "type": "int"
+                        },
+                        {
+                            "name": "quality",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 13,
+                    "lineNumber": 31,
+                    "name": "generateWallpaperThumbnail",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 14,
+                    "lineNumber": 37,
+                    "name": "requestBrightness",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "value",
+                            "type": "double"
+                        }
+                    ],
+                    "index": 15,
+                    "lineNumber": 38,
+                    "name": "setBrightness",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 16,
+                    "lineNumber": 39,
+                    "name": "requestVolume",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "value",
+                            "type": "double"
+                        }
+                    ],
+                    "index": 17,
+                    "lineNumber": 40,
+                    "name": "setVolume",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 18,
+                    "lineNumber": 41,
+                    "name": "requestSystemStats",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 19,
+                    "lineNumber": 42,
+                    "name": "requestTlpState",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "mode",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "sudoPassword",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 20,
+                    "lineNumber": 43,
+                    "name": "setTlpMode",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "mode",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 21,
+                    "isCloned": true,
+                    "lineNumber": 43,
+                    "name": "setTlpMode",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 22,
+                    "lineNumber": 44,
+                    "name": "cancelTlpApply",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "clientId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "active",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 23,
+                    "lineNumber": 45,
+                    "name": "setCavaClientActive",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "shellDir",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 24,
+                    "lineNumber": 46,
+                    "name": "ensureSetupComplete",
+                    "returnType": "void"
+                }
+            ],
+            "object": true,
+            "properties": [
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 0,
+                    "lineNumber": 19,
+                    "name": "screenRecordingActive",
+                    "notify": "screenRecordingActiveChanged",
+                    "override": false,
+                    "read": "screenRecordingActive",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": true,
+                    "index": 1,
+                    "lineNumber": 20,
+                    "name": "cavaLevels",
+                    "notify": "cavaLevelsChanged",
+                    "override": false,
+                    "read": "cavaLevels",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantList",
+                    "user": false,
+                    "virtual": false
+                }
+            ],
+            "qualifiedClassName": "SystemServices",
+            "signals": [
+                {
+                    "access": "public",
+                    "index": 0,
+                    "lineNumber": 49,
+                    "name": "screenRecordingActiveChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "requestId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "subject",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "payloadJson",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "errorString",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 1,
+                    "lineNumber": 50,
+                    "name": "hyprlandSnapshotReady",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "sourcePath",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "cachePath",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "cacheAvailable",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "updated",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "errorString",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 2,
+                    "lineNumber": 54,
+                    "name": "wallpaperThumbnailFinished",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "value",
+                            "type": "double"
+                        },
+                        {
+                            "name": "errorString",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 3,
+                    "lineNumber": 59,
+                    "name": "brightnessSnapshotReady",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "value",
+                            "type": "double"
+                        },
+                        {
+                            "name": "success",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "errorString",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 4,
+                    "lineNumber": 60,
+                    "name": "brightnessSetFinished",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "value",
+                            "type": "double"
+                        },
+                        {
+                            "name": "muted",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "errorString",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 5,
+                    "lineNumber": 61,
+                    "name": "volumeSnapshotReady",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "value",
+                            "type": "double"
+                        },
+                        {
+                            "name": "success",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "errorString",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 6,
+                    "lineNumber": 62,
+                    "name": "volumeSetFinished",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "cpuUsage",
+                            "type": "double"
+                        },
+                        {
+                            "name": "ramUsage",
+                            "type": "double"
+                        },
+                        {
+                            "name": "errorString",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 7,
+                    "lineNumber": 63,
+                    "name": "systemStatsReady",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "available",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "profile",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "output",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "errorString",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 8,
+                    "lineNumber": 64,
+                    "name": "tlpStateReady",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "success",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "exitCode",
+                            "type": "int"
+                        },
+                        {
+                            "name": "output",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "errorString",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 9,
+                    "lineNumber": 65,
+                    "name": "tlpSetFinished",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 10,
+                    "lineNumber": 66,
+                    "name": "cavaLevelsChanged",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "SystemServices.h",
+    "outputRevision": 69
+}

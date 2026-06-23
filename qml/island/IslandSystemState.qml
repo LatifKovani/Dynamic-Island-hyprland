@@ -239,7 +239,7 @@ Item {
         case "org.gnome.nautilus":
             return {
                 name: "Files",
-                icon: base + "org.gnome.Nautilus.svg",
+                icon: base + "org.gnome.files.svg",
                 iconKind: "theme"
             };
         case "brave-browser":
@@ -256,6 +256,12 @@ Item {
                 icon: base + "com.visualstudio.code.svg",
                 iconKind: "theme"
             };
+        case "pinentry-gtk":
+            return {
+                name: " Password",
+                icon: base + "dialog-password.svg",
+                iconKind: "theme"
+            };
         case "nvim":
         case "neovim":
             return {
@@ -267,6 +273,18 @@ Item {
             return {
                 name: " OBS",
                 icon: base + "com.obsproject.Studio.svg",
+                iconKind: "theme"
+            };
+        case "org.gnome.calculator":
+            return {
+                name: " Calculator",
+                icon: base + "calc.svg",
+                iconKind: "theme"
+            };
+        case "com.gabm.satty":
+            return {
+                name: " Satty",
+                icon: base + "accessories-camera.svg",
                 iconKind: "theme"
             };
         case "org.gnome.texteditor":
