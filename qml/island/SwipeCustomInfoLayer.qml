@@ -17,6 +17,8 @@ Item {
     property string timeFontFamily: activeConfig.timeFontFamily
     property bool showCondition: false
     property bool showSecondaryText: true
+    // Toggle showing the clock in this layer via user config (default true)
+    property bool showTimeLayer: (activeConfig.showTimeInCustomInfoLayer !== undefined) ? activeConfig.showTimeInCustomInfoLayer : true
     property bool recordingActive: false
     property real transitionProgress: 0
     property real minimumWidth: 220
