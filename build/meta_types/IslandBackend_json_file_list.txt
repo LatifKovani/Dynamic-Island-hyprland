@@ -1,8 +1,0 @@
-/home/latif/.config/Tide-island/build/IslandBackend_autogen/include/../FVSNT77ZGO/moc_BluetoothPairingAgent.cpp.json
-/home/latif/.config/Tide-island/build/IslandBackend_autogen/include/../FVSNT77ZGO/moc_StyleTokensBackend.cpp.json
-/home/latif/.config/Tide-island/build/IslandBackend_autogen/include/../FVSNT77ZGO/moc_SysBackend.cpp.json
-/home/latif/.config/Tide-island/build/IslandBackend_autogen/include/../FVSNT77ZGO/moc_SystemServices.cpp.json
-/home/latif/.config/Tide-island/build/IslandBackend_autogen/include/../FVSNT77ZGO/moc_UserConfigBackend.cpp.json
-/home/latif/.config/Tide-island/build/IslandBackend_autogen/include/../FVSNT77ZGO/moc_WifiController.cpp.json
-/home/latif/.config/Tide-island/build/IslandBackend_autogen/include/../FVSNT77ZGO/moc_WifiNetworkModel.cpp.json
-/home/latif/.config/Tide-island/build/IslandBackend_autogen/include/WifiController.moc.json

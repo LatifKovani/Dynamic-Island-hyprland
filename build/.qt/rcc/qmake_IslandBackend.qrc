@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="/IslandBackend">
-    <file alias="qmldir">/home/latif/.config/Tide-island/build/qmldir</file>
-  </qresource>
-</RCC>
-

@@ -77,14 +77,14 @@ PanelWindow {
     implicitHeight: root.overviewVisible ? Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(4 + root.overviewCapsuleHeight + 8), Math.ceil(root.controlCenterWindowHeight), Math.ceil(root.aiTranslateWindowHeight)) : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight), Math.ceil(root.aiTranslateWindowHeight))
     exclusiveZone: 45
     aboveWindows: true
-    focusable: islandContainer.appLauncherLayerVisible || islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible || islandContainer.aiTranslateLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
+    focusable: islandContainer.appLauncherLayerVisible || islandContainer.polkitAuthLayerVisible || islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible || islandContainer.aiTranslateLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: {
         if (islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible)
             return WlrKeyboardFocus.Exclusive;
         if (!root.monitorFocused)
             return WlrKeyboardFocus.None;
-        if (islandContainer.appLauncherLayerVisible || islandContainer.powerMenuLayerVisible || islandContainer.aiTranslateLayerVisible)
+        if (islandContainer.appLauncherLayerVisible || islandContainer.powerMenuLayerVisible || islandContainer.aiTranslateLayerVisible || islandContainer.polkitAuthLayerVisible)
             return WlrKeyboardFocus.Exclusive;
         if (root.overviewVisible || root.connectivityPromptActive || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen))
             return WlrKeyboardFocus.OnDemand;
@@ -406,7 +406,7 @@ PanelWindow {
         readonly property int swipeAnimationDuration: 220
 
         // ── lock_unlock shtohet te blocksTransientSplit ──
-        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "alcove_music" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker" || islandState === "clipboard_history" || islandState === "lock_unlock" || islandState === "ai_translate"
+        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "alcove_music" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker" || islandState === "clipboard_history" || islandState === "lock_unlock" || islandState === "ai_translate" || islandState === "polkit_auth"
 
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
@@ -438,6 +438,8 @@ PanelWindow {
         readonly property bool wallpaperPickerLayerVisible: !root.overviewVisible && islandState === "wallpaper_picker"
         readonly property bool clipboardHistoryLayerVisible: !root.overviewVisible && islandState === "clipboard_history"
         readonly property bool aiTranslateLayerVisible: !root.overviewVisible && islandState === "ai_translate"
+
+        readonly property bool polkitAuthLayerVisible: !root.overviewVisible && islandState === "polkit_auth"
 
         readonly property bool lockUnlockLayerVisible: !root.overviewVisible && islandState === "lock_unlock"
 
@@ -516,6 +518,21 @@ PanelWindow {
             }
             function onCriticalBatteryRequested(icon, progress, text) {
                 islandContainer.showCriticalBatteryNotification(icon, progress, text);
+            }
+        }
+        Connections {
+            target: PolkitAgent
+            function onAuthRequested() {
+                if (root.overviewVisible)
+                    return;
+                islandContainer.showPolkitAuth();
+            }
+            function onAuthCompleted(success) {
+                islandContainer.smartRestoreState();
+            }
+            function onActiveChanged() {
+                if (!PolkitAgent.active && islandContainer.islandState === "polkit_auth")
+                    islandContainer.smartRestoreState();
             }
         }
 
@@ -1117,6 +1134,14 @@ PanelWindow {
             mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
             stopAutoHideTimer();
         }
+        function showPolkitAuth() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "polkit_auth";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
 
         // ── NEW: Lock Unlock ──────────────────────────────────────────────
         function showLockUnlock() {
@@ -1294,6 +1319,8 @@ PanelWindow {
                     return 460;
                 case "ai_translate":
                     return 600;
+                case "polkit_auth":
+                    return 420;
                 case "expanded":
                     return 620;
                 case "alcove_music":
@@ -1328,6 +1355,8 @@ PanelWindow {
                     return 390;
                 case "ai_translate":
                     return 480;
+                case "polkit_auth":
+                    return 260;
                 case "expanded":
                     return 192;
                 case "alcove_music":
@@ -1359,6 +1388,8 @@ PanelWindow {
                 case "clipboard_history":
                     return 34;
                 case "ai_translate":
+                    return 34;
+                case "polkit_auth":
                     return 34;
                 case "expanded":
                     return 40;
@@ -2022,6 +2053,21 @@ PanelWindow {
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         showCondition: islandContainer.aiTranslateLayerVisible
+                        onCloseRequested: islandContainer.smartRestoreState()
+                    }
+                }
+            }
+            Loader {
+                id: polkitAuthLoader
+                anchors.fill: parent
+                active: islandContainer.polkitAuthLayerVisible
+                asynchronous: false
+                visible: active
+                sourceComponent: Component {
+                    PolkitAuthLayer {
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        showCondition: islandContainer.polkitAuthLayerVisible
                         onCloseRequested: islandContainer.smartRestoreState()
                     }
                 }

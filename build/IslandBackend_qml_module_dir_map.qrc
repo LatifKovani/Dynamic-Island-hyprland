@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="/">
-    <file alias="/IslandBackend">/home/latif/.config/Tide-island/build</file>
-
-  </qresource>
-</RCC>
