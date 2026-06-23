@@ -67,7 +67,7 @@ Scope {
         target: "tide"
 
         function toggleAppLauncher() {
-                // Existing function unchanged
+            // Existing function unchanged
             shellRoot.forEachWindow(window => {
                 if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
                     return;
@@ -214,11 +214,9 @@ Scope {
     Connections {
         target: Notifs
         function onNotificationAdded(notif) {
-            // Don't show if DND is on (Notifs already suppresses, but belt+suspenders)
             if (Notifs.dndEnabled)
                 return;
 
-            // Don't show if focus/DND card is active in the control center
             const windows = panelVariants.instances ? panelVariants.instances : [];
             for (let i = 0; i < windows.length; i++) {
                 const w = windows[i];
@@ -245,7 +243,7 @@ Scope {
     Variants {
         id: panelVariants
 
-        model: Quickshell.screens // all screens
+        model: Quickshell.screens
 
         DynamicIslandWindow {
             required property var modelData

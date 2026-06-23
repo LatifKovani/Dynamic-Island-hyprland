@@ -49,7 +49,6 @@ Item {
     readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
 
     Component.onCompleted: {
-        // Restore any previously saved album art URL
         restoreLastArt();
         if (preloadedArtSource !== "") {
             _displayedSource = preloadedArtSource;
@@ -57,6 +56,11 @@ Item {
             artWrapper.scale = 1.0;
         } else if (currentArtUrl !== "") {
             loadArt(currentArtUrl);
+        } else if (_displayedSource !== "") {
+            // Restored from DB but no live source yet — re-drive artLoader
+            // so the image actually gets loaded/cached and artSingle renders it
+            _loadingSource = _displayedSource;
+            _displayedSource = "";   // clear so _commitArt takes the "wasEmpty" entrance-anim path
         }
     }
 
