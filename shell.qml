@@ -67,7 +67,6 @@ Scope {
         target: "tide"
 
         function toggleAppLauncher() {
-            // Existing function unchanged
             shellRoot.forEachWindow(window => {
                 if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
                     return;

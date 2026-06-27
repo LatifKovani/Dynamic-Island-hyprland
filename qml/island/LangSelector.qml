@@ -1,6 +1,5 @@
 import QtQuick
 
-// ── Language dropdown selector used by TranslateTab ────────────────────────
 Rectangle {
     id: sel
     property string fontFamily: ""
@@ -10,10 +9,18 @@ Rectangle {
 
     radius: 9
     color: selMa.containsMouse ? "#2a2a2a" : "#1e1e1e"
-    Behavior on color { ColorAnimation { duration: 120 } }
+    Behavior on color {
+        ColorAnimation {
+            duration: 120
+        }
+    }
 
     Text {
-        anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 10 }
+        anchors {
+            left: parent.left
+            verticalCenter: parent.verticalCenter
+            leftMargin: 10
+        }
         text: sel.languages.length > 0 ? sel.languages[sel.selectedIndex].label : ""
         font.family: sel.fontFamily
         font.pixelSize: 12
@@ -21,7 +28,11 @@ Rectangle {
     }
 
     Text {
-        anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 8 }
+        anchors {
+            right: parent.right
+            verticalCenter: parent.verticalCenter
+            rightMargin: 8
+        }
         text: "▾"
         font.pixelSize: 10
         color: "#666666"
@@ -35,7 +46,6 @@ Rectangle {
         onClicked: dropdown.visible = !dropdown.visible
     }
 
-    // Dropdown
     Rectangle {
         id: dropdown
         visible: false
@@ -63,10 +73,18 @@ Rectangle {
                     radius: 6
                     color: optMa.containsMouse ? "#2a2a2a" : (sel.selectedIndex === index ? "#222233" : "transparent")
 
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 100
+                        }
+                    }
 
                     Text {
-                        anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 8 }
+                        anchors {
+                            left: parent.left
+                            verticalCenter: parent.verticalCenter
+                            leftMargin: 8
+                        }
                         text: modelData.label
                         font.family: sel.fontFamily
                         font.pixelSize: 12
@@ -88,7 +106,6 @@ Rectangle {
         }
     }
 
-    // Close dropdown when clicking elsewhere
     Connections {
         target: sel.Window.window
         function onActiveFocusItemChanged() {

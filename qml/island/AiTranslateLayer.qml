@@ -7,25 +7,30 @@ Item {
     property string iconFontFamily: ""
     property string textFontFamily: ""
     property bool showCondition: false
-    signal closeRequested()
+    signal closeRequested
 
-    // ── Backend ───────────────────────────────────────────────────────────
     AiTranslateBackend {
         id: backend
     }
 
-    // ── Visibility animation ──────────────────────────────────────────────
     opacity: showCondition ? 1 : 0
     Behavior on opacity {
-        NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
+        NumberAnimation {
+            duration: 180
+            easing.type: Easing.InOutQuad
+        }
     }
 
     anchors.fill: parent
 
-    // ── Header ────────────────────────────────────────────────────────────
     Item {
         id: header
-        anchors { top: parent.top; left: parent.left; right: parent.right; topMargin: 12 }
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+            topMargin: 12
+        }
         height: 36
 
         Text {
@@ -37,13 +42,21 @@ Item {
             color: "#ffffff"
         }
 
-        // Close button
         Rectangle {
-            width: 28; height: 28
-            anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+            width: 28
+            height: 28
+            anchors {
+                right: parent.right
+                rightMargin: 12
+                verticalCenter: parent.verticalCenter
+            }
             radius: 8
             color: closeMa.containsMouse ? "#2a2a2a" : "transparent"
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: 120
+                }
+            }
 
             Text {
                 anchors.centerIn: parent
@@ -62,15 +75,20 @@ Item {
         }
     }
 
-    // ── Thin divider ──────────────────────────────────────────────────────
     Rectangle {
         id: headerDivider
-        anchors { top: header.bottom; left: parent.left; right: parent.right; topMargin: 4; leftMargin: 12; rightMargin: 12 }
+        anchors {
+            top: header.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: 4
+            leftMargin: 12
+            rightMargin: 12
+        }
         height: 1
         color: "#222222"
     }
 
-    // ── Translate content ─────────────────────────────────────────────────
     TranslateTab {
         id: translateTab
         anchors {

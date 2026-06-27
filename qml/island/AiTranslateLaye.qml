@@ -7,32 +7,33 @@ Item {
     property string iconFontFamily: ""
     property string textFontFamily: ""
     property bool showCondition: false
-    signal closeRequested()
+    signal closeRequested
 
-    // ── Backend ───────────────────────────────────────────────────────────
     AiTranslateBackend {
         id: backend
     }
 
-    // ── Tab state ─────────────────────────────────────────────────────────
-    property int activeTab: 0  // 0 = AI, 1 = Translate
-
-    // ── Visibility animation ──────────────────────────────────────────────
+    property int activeTab: 0
     opacity: showCondition ? 1 : 0
     Behavior on opacity {
-        NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
+        NumberAnimation {
+            duration: 180
+            easing.type: Easing.InOutQuad
+        }
     }
 
-    // ── Root layout ───────────────────────────────────────────────────────
     anchors.fill: parent
 
-    // ── Tab bar ───────────────────────────────────────────────────────────
     Item {
         id: tabBar
-        anchors { top: parent.top; left: parent.left; right: parent.right; topMargin: 12 }
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+            topMargin: 12
+        }
         height: 36
 
-        // Background pill for active tab
         Rectangle {
             id: tabIndicator
             y: 2
@@ -42,8 +43,18 @@ Item {
             radius: 10
             color: "#1e1e1e"
 
-            Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-            Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+            Behavior on x {
+                NumberAnimation {
+                    duration: 200
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on width {
+                NumberAnimation {
+                    duration: 200
+                    easing.type: Easing.OutCubic
+                }
+            }
         }
 
         Row {
@@ -51,10 +62,10 @@ Item {
             anchors.centerIn: parent
             spacing: 4
 
-            // AI tab
             Rectangle {
                 id: tabAi
-                width: 120; height: 30
+                width: 120
+                height: 30
                 radius: 10
                 color: "transparent"
 
@@ -67,7 +78,11 @@ Item {
                         font.pixelSize: 12
                         color: activeTab === 0 ? "#3d7aed" : "#555555"
                         anchors.verticalCenter: parent.verticalCenter
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: 150
+                            }
+                        }
                     }
                     Text {
                         text: "AI Chat"
@@ -76,7 +91,11 @@ Item {
                         font.weight: activeTab === 0 ? Font.DemiBold : Font.Normal
                         color: activeTab === 0 ? "#ffffff" : "#666666"
                         anchors.verticalCenter: parent.verticalCenter
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: 150
+                            }
+                        }
                     }
                 }
 
@@ -87,10 +106,10 @@ Item {
                 }
             }
 
-            // Translate tab
             Rectangle {
                 id: tabTranslate
-                width: 120; height: 30
+                width: 120
+                height: 30
                 radius: 10
                 color: "transparent"
 
@@ -103,7 +122,11 @@ Item {
                         font.pixelSize: 13
                         color: activeTab === 1 ? "#3d7aed" : "#555555"
                         anchors.verticalCenter: parent.verticalCenter
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: 150
+                            }
+                        }
                     }
                     Text {
                         text: "Translate"
@@ -112,7 +135,11 @@ Item {
                         font.weight: activeTab === 1 ? Font.DemiBold : Font.Normal
                         color: activeTab === 1 ? "#ffffff" : "#666666"
                         anchors.verticalCenter: parent.verticalCenter
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: 150
+                            }
+                        }
                     }
                 }
 
@@ -124,13 +151,21 @@ Item {
             }
         }
 
-        // Close button
         Rectangle {
-            width: 28; height: 28
-            anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+            width: 28
+            height: 28
+            anchors {
+                right: parent.right
+                rightMargin: 12
+                verticalCenter: parent.verticalCenter
+            }
             radius: 8
             color: closeMa.containsMouse ? "#2a2a2a" : "transparent"
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: 120
+                }
+            }
 
             Text {
                 anchors.centerIn: parent
@@ -149,15 +184,20 @@ Item {
         }
     }
 
-    // ── Thin divider ──────────────────────────────────────────────────────
     Rectangle {
         id: tabDivider
-        anchors { top: tabBar.bottom; left: parent.left; right: parent.right; topMargin: 4; leftMargin: 12; rightMargin: 12 }
+        anchors {
+            top: tabBar.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: 4
+            leftMargin: 12
+            rightMargin: 12
+        }
         height: 1
         color: "#222222"
     }
 
-    // ── Tab content area ──────────────────────────────────────────────────
     Item {
         id: contentArea
         anchors {
@@ -179,7 +219,11 @@ Item {
             isActive: aiTranslateLayer.activeTab === 0
             visible: aiTranslateLayer.activeTab === 0
             opacity: visible ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 150 } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 150
+                }
+            }
         }
 
         TranslateTab {
@@ -190,7 +234,11 @@ Item {
             isActive: aiTranslateLayer.activeTab === 1
             visible: aiTranslateLayer.activeTab === 1
             opacity: visible ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 150 } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 150
+                }
+            }
         }
     }
 }

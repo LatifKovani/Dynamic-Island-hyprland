@@ -38,11 +38,6 @@ Item {
             ensureCacheDirProcess.running = true;
             focusTimer.restart();
         } else {
-            // Layer is closing via Escape/outside-click/etc. If selectEntry()
-            // triggered the close, copyProcess has already exited by this
-            // point (see pendingClose handling above), so this only cancels
-            // genuinely abandoned copies — e.g. the user opened the picker
-            // and dismissed it without choosing anything.
             copyProcess.running = false;
         }
     }
@@ -70,7 +65,6 @@ Item {
         id: shownEntries
     }
 
-    // ── Filter ────────────────────────────────────────────────────────────────
     function filterEntries(query) {
         shownEntries.clear();
         highlightedIndex = -1;
@@ -105,7 +99,6 @@ Item {
         resultsList.positionViewAtIndex(next, ListView.Contain);
     }
 
-    // ── Cache dir + list scan ────────────────────────────────────────────────
     Process {
         id: ensureCacheDirProcess
         command: ["mkdir", "-p", root.thumbCacheDir]
@@ -117,9 +110,6 @@ Item {
         command: ["cliphist", "list"]
         stdout: SplitParser {
             onRead: line => {
-                // cliphist list lines look like:
-                //   "12\tsome copied text"
-                //   "7\t[[ binary data 3a9f2c1 png 1920x1080 ]]"
                 const tabIndex = line.indexOf('\t');
                 if (tabIndex === -1)
                     return;
@@ -141,9 +131,6 @@ Item {
         }
     }
 
-    // ── Lazy thumbnail decoding ──────────────────────────────────────────────
-    // Decode image entries to disk one at a time so we don't fork a process
-    // per row on initial load.
     QtObject {
         id: thumbDecodeQueue
         property var pending: []
@@ -196,13 +183,6 @@ Item {
         thumbDecodeQueue.enqueue(entryId);
     }
 
-    // ── Copy selected entry back to the clipboard ───────────────────────────
-    // NOTE: command is built fresh per call (not via a shared mutable property)
-    // so two quick selections can never race each other's entryId.
-    // We also don't close the layer until this process actually exits —
-    // closing too early can tear down the Loader (and this Process with it)
-    // before "cliphist decode | wl-copy" has finished writing the clipboard,
-    // which silently leaves the OLD clipboard contents in place.
     Process {
         id: copyProcess
         property bool pendingClose: false
@@ -216,8 +196,6 @@ Item {
     }
 
     function selectEntry(entryId) {
-        // If a previous copy is still in flight, let it finish first rather
-        // than clobbering its args mid-exec.
         if (copyProcess.running)
             copyProcess.running = false;
         copyProcess.pendingClose = true;
@@ -225,7 +203,6 @@ Item {
         copyProcess.running = true;
     }
 
-    // ── Delete a single entry from cliphist's history ───────────────────────
     Process {
         id: deleteProcess
         property string targetLine: ""
@@ -240,12 +217,10 @@ Item {
     }
 
     function deleteEntry(entryId, preview) {
-        // cliphist delete-query matches on the full "id\tpreview" line.
         deleteProcess.targetLine = entryId + "\t" + preview;
         deleteProcess.running = true;
     }
 
-    // ── Clear entire clipboard history ──────────────────────────────────────
     Process {
         id: wipeProcess
         command: ["cliphist", "wipe"]
@@ -261,7 +236,6 @@ Item {
         wipeProcess.running = true;
     }
 
-    // ── Keyboard ──────────────────────────────────────────────────────────────
     Keys.onPressed: event => {
         switch (event.key) {
         case Qt.Key_Down:
@@ -302,13 +276,11 @@ Item {
         }
     }
 
-    // ── UI ────────────────────────────────────────────────────────────────────
     Column {
         anchors.fill: parent
         anchors.margins: 12
         spacing: 8
 
-        // ── Search bar — transparent bg, just a bottom separator line ─────────
         Item {
             width: parent.width
             height: 34
@@ -397,14 +369,12 @@ Item {
             }
         }
 
-        // Separator line under search
         Rectangle {
             width: parent.width
             height: 1
             color: Qt.rgba(1, 1, 1, 0.10)
         }
 
-        // ── Entry list — fills all remaining space ─────────────────────────────
         Item {
             width: parent.width
             height: parent.height - 34 - 8 - 1 - 8
@@ -443,7 +413,6 @@ Item {
                             root.requestThumb(model.entryId);
                     }
 
-                    // Left accent bar
                     Rectangle {
                         anchors.left: parent.left
                         anchors.leftMargin: 2
@@ -466,7 +435,6 @@ Item {
                         anchors.rightMargin: 8
                         spacing: 0
 
-                        // Icon / thumbnail
                         Item {
                             width: 28
                             height: parent.height
@@ -498,7 +466,6 @@ Item {
                             height: 1
                         }
 
-                        // Preview text
                         Text {
                             width: parent.width - 28 - 8
                             anchors.verticalCenter: parent.verticalCenter
@@ -528,9 +495,6 @@ Item {
                                 root.selectEntry(model.entryId);
                         }
                         onPositionChanged: {
-                            // Only real mouse movement hands control back from
-                            // keyboard nav — a row sliding under a stationary
-                            // cursor must not steal the highlight.
                             root.keyboardNavActive = false;
                             root.highlightedIndex = index;
                         }

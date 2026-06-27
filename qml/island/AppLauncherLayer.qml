@@ -62,7 +62,6 @@ Item {
         id: shownApps
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
     function isFavourite(name) {
         for (let i = 0; i < root.favouriteApps.length; i++)
             if (root.favouriteApps[i].toLowerCase() === name.toLowerCase())
@@ -76,14 +75,12 @@ Item {
         return false;
     }
 
-    // ── Filter ────────────────────────────────────────────────────────────────
     function filterApps(query) {
         shownApps.clear();
         highlightedIndex = -1;
         const q = query.toLowerCase().trim();
 
         if (!q) {
-            // Favourites first
             for (let i = 0; i < allApps.count; i++) {
                 const a = allApps.get(i);
                 if (isFavourite(a.appName) && !isHidden(a.appName))
@@ -162,7 +159,6 @@ Item {
         root.closeRequested();
     }
 
-    // ── Keyboard ──────────────────────────────────────────────────────────────
     Keys.onPressed: event => {
         switch (event.key) {
         case Qt.Key_Down:
@@ -190,13 +186,11 @@ Item {
         }
     }
 
-    // ── UI ────────────────────────────────────────────────────────────────────
     Column {
         anchors.fill: parent
         anchors.margins: 12
         spacing: 8
 
-        // ── Search bar — transparent bg, just a bottom separator line ─────────
         Item {
             width: parent.width
             height: 34
@@ -244,17 +238,14 @@ Item {
             }
         }
 
-        // Separator line under search
         Rectangle {
             width: parent.width
             height: 1
             color: Qt.rgba(1, 1, 1, 0.10)
         }
 
-        // ── App list — fills all remaining space ──────────────────────────────
         Item {
             width: parent.width
-            // Fill: total - searchbar - spacing - separator - spacing
             height: parent.height - 34 - 8 - 1 - 8
 
             Text {
@@ -274,7 +265,6 @@ Item {
                 clip: true
                 keyNavigationEnabled: false
 
-                // Section headers: "FAVOURITES" above fav block, "ALL APPS" above rest
                 section.property: "section"
                 section.delegate: Item {
                     width: resultsList.width
@@ -307,7 +297,6 @@ Item {
                         }
                     }
 
-                    // Left accent bar
                     Rectangle {
                         anchors.left: parent.left
                         anchors.leftMargin: 2
@@ -330,7 +319,6 @@ Item {
                         anchors.rightMargin: 8
                         spacing: 0
 
-                        // Icon
                         Item {
                             width: 28
                             height: parent.height
@@ -361,7 +349,6 @@ Item {
                             height: 1
                         }
 
-                        // Name
                         Text {
                             width: parent.width - 28 - 8 - (model.section === "favourites" ? 18 : 0)
                             anchors.verticalCenter: parent.verticalCenter
@@ -378,7 +365,6 @@ Item {
                             }
                         }
 
-                        // Star (favourites only)
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: model.section === "favourites"

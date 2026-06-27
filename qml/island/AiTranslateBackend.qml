@@ -5,13 +5,11 @@ import Quickshell.Io
 QtObject {
     id: backend
 
-    // ── Translate (MyMemory) ─────────────────────────────────────────────────
     signal translateResponseReceived(string result)
     signal translateErrorReceived(string error)
 
     property bool translateLoading: false
 
-    // ── MyMemory Translation ───────────────────────────────────────────────
     function translate(text, sourceLang, targetLang) {
         if (text.trim() === "")
             return;

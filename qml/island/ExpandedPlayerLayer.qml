@@ -12,7 +12,6 @@ Item {
     property bool progressDragging: false
 
     readonly property var userConfig: UserConfig
-    // Simple local storage for persisting last displayed album art across sessions
     function db() {
         return LocalStorage.openDatabaseSync("QuickshellAlbumArt", "1.0", "Last album art", 1000);
     }
@@ -30,11 +29,9 @@ Item {
     property string textFontFamily: userConfig.textFontFamily
     property real visualizerPhase: 0
 
-    // ── Retry state ──
     property int artRetryCount: 0
     property int artMaxRetries: 10
 
-    // ── Crossfade state ──
     property string _displayedSource: ""
     property string _loadingSource: ""
 
@@ -57,10 +54,8 @@ Item {
         } else if (currentArtUrl !== "") {
             loadArt(currentArtUrl);
         } else if (_displayedSource !== "") {
-            // Restored from DB but no live source yet — re-drive artLoader
-            // so the image actually gets loaded/cached and artSingle renders it
             _loadingSource = _displayedSource;
-            _displayedSource = "";   // clear so _commitArt takes the "wasEmpty" entrance-anim path
+            _displayedSource = "";
         }
     }
 
@@ -82,11 +77,9 @@ Item {
             _pendingArtSource = _loadingSource;
             artFlipAnim.restart();
         }
-        // Persist the displayed art URL after a successful commit
         saveLastArt();
     }
 
-    // Persist the currently displayed album art URL
     function saveLastArt() {
         db().transaction(function (tx) {
             tx.executeSql("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)");
@@ -94,7 +87,6 @@ Item {
         });
     }
 
-    // Restore saved art URL on startup
     function restoreLastArt() {
         db().transaction(function (tx) {
             const rs = tx.executeSql("SELECT value FROM settings WHERE key='lastArt'");
@@ -301,15 +293,13 @@ Item {
             scale: 1.0
             transformOrigin: Item.Center
 
-            // Mask for rounded corners
             Rectangle {
                 id: artMask
                 anchors.fill: parent
-                radius: 18
+                radius: 27
                 visible: false
             }
 
-            // Album art image with opacity mask
             Image {
                 id: artSingle
                 anchors.fill: parent
@@ -323,7 +313,7 @@ Item {
                 layer.effect: OpacityMask {
                     maskSource: artMask
                 }
-                // Apply flip rotation using root._flipAngle
+
                 transform: Rotation {
                     origin.x: artSingle.width / 2
                     origin.y: artSingle.height / 2
@@ -336,7 +326,6 @@ Item {
                 }
             }
 
-            // Fallback when no art or load error
             Rectangle {
                 anchors.fill: parent
                 radius: 18
@@ -353,7 +342,6 @@ Item {
             }
         }
 
-        // ── Track info + progress + controls ────────────────────────
         Column {
             width: 210
             anchors.verticalCenter: parent.verticalCenter
@@ -416,7 +404,6 @@ Item {
                 }
             }
 
-            // ── Seekable progress bar ────────────────────────────────
             Item {
                 id: progressBarItem
                 width: 160
@@ -543,7 +530,6 @@ Item {
                 }
             }
 
-            // ── Playback controls ────────────────────────────────────
             Item {
                 width: 160
                 height: 28
@@ -629,7 +615,6 @@ Item {
             }
         }
 
-        // ── Calendar ─────────────────────────────────────────────────
         Column {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 5

@@ -405,7 +405,6 @@ PanelWindow {
         readonly property int bluetoothExpandedAutoHideInterval: 2500
         readonly property int swipeAnimationDuration: 220
 
-        // ── lock_unlock shtohet te blocksTransientSplit ──
         readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "alcove_music" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker" || islandState === "clipboard_history" || islandState === "lock_unlock" || islandState === "ai_translate" || islandState === "polkit_auth"
 
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
@@ -1143,7 +1142,6 @@ PanelWindow {
             stopAutoHideTimer();
         }
 
-        // ── NEW: Lock Unlock ──────────────────────────────────────────────
         function showLockUnlock() {
             cancelSideSwipeSettle();
             abortSideTransientMode();
@@ -1174,7 +1172,6 @@ PanelWindow {
             onTriggered: {
                 islandContainer.lockUnlockResetting = false;
                 islandContainer.smartRestoreState();
-                // Reset the flag after the state change is complete
                 Qt.callLater(function () {
                     islandContainer.skipWidthAnimation = false;
                 });
@@ -1875,7 +1872,6 @@ PanelWindow {
 
             Loader {
                 id: expandedPlayerLoader
-                // Keep component alive after first load so Pomodoro timer continues when hidden
                 property bool keepAlive: false
                 active: islandContainer.expandedLayerVisible || keepAlive
                 asynchronous: false

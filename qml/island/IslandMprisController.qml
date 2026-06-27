@@ -35,14 +35,12 @@ Item {
         return "Unknown";
     }
 
-    // ── Art URL me filter ──
     readonly property string _rawArtUrl: activePlayer ? (activePlayer.trackArtUrl || activePlayer.artUrl || "") : ""
     readonly property string currentArtUrl: isRealArt(_rawArtUrl) ? _rawArtUrl : _lastGoodArtUrl
 
     property string _lastGoodArtUrl: ""
 
     onCurrentTrackChanged: {
-        // Track i ri — reseto artin e fundit të mirë
         _lastGoodArtUrl = "";
     }
 
@@ -51,18 +49,14 @@ Item {
             _lastGoodArtUrl = _rawArtUrl;
     }
 
-    // ── Kontrollon nëse URL-ja është art i vërtetë (jo ikonë aplikacioni) ──
     function isRealArt(url) {
         if (!url || url === "")
             return false;
         const lower = url.toLowerCase();
 
-        // ── URL-të http/https janë gjithmonë art i vërtetë (YouTube, Spotify, etj.) ──
         if (lower.startsWith("http://") || lower.startsWith("https://"))
             return true;
 
-        // ── File lokale: vetëm cache MPRIS është art i vërtetë ──
-        // Quickshell/MPRIS cache zakonisht ruhet në /tmp ose ~/.cache
         if (lower.startsWith("file://")) {
             if (lower.indexOf("/tmp/") !== -1)
                 return true;
@@ -76,15 +70,11 @@ Item {
                 return true;
             if (lower.indexOf("coverart") !== -1)
                 return true;
-            // Çdo gjë tjetër file:// (ikona app nga /usr, /opt, etj.) — injoro
             return false;
         }
 
-        // ── Path absolute pa file:// (p.sh. /usr/share/icons/...) — injoro ──
         if (lower.startsWith("/"))
             return false;
-
-        // ── Të tjera (data: URIs, etj.) — lejo ──
         return true;
     }
 

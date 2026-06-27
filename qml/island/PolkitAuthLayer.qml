@@ -20,18 +20,15 @@ Item {
         }
     }
 
-    // ── Content ───────────────────────────────────────────────────────────
     Column {
         anchors.fill: parent
         anchors.margins: 20
         spacing: 14
 
-        // ── Header: lock icon + action ────────────────────────────────
         Row {
             width: parent.width
             spacing: 10
 
-            // Lock icon
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "\uf023"
@@ -65,14 +62,12 @@ Item {
             }
         }
 
-        // ── Divider ───────────────────────────────────────────────────
         Rectangle {
             width: parent.width
             height: 1
             color: Qt.rgba(1, 1, 1, 0.07)
         }
 
-        // ── App name row ──────────────────────────────────────────────
         Row {
             width: parent.width
             spacing: 6
@@ -95,27 +90,50 @@ Item {
             }
         }
 
-        // ── Password field ────────────────────────────────────────────
         Rectangle {
             width: parent.width
             height: 34
             radius: 10
-            color: passwordInput.activeFocus
-                ? Qt.rgba(1, 1, 1, 0.10)
-                : Qt.rgba(1, 1, 1, 0.06)
+            color: passwordInput.activeFocus ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.06)
 
             Behavior on color {
-                ColorAnimation { duration: 120 }
+                ColorAnimation {
+                    duration: 120
+                }
             }
 
-            // Error shake animation
             SequentialAnimation {
                 id: shakeAnim
-                NumberAnimation { target: passwordField; property: "x"; to: passwordField.x + 6;  duration: 40 }
-                NumberAnimation { target: passwordField; property: "x"; to: passwordField.x - 6;  duration: 40 }
-                NumberAnimation { target: passwordField; property: "x"; to: passwordField.x + 4;  duration: 40 }
-                NumberAnimation { target: passwordField; property: "x"; to: passwordField.x - 4;  duration: 40 }
-                NumberAnimation { target: passwordField; property: "x"; to: passwordField.x;       duration: 40 }
+                NumberAnimation {
+                    target: passwordField
+                    property: "x"
+                    to: passwordField.x + 6
+                    duration: 40
+                }
+                NumberAnimation {
+                    target: passwordField
+                    property: "x"
+                    to: passwordField.x - 6
+                    duration: 40
+                }
+                NumberAnimation {
+                    target: passwordField
+                    property: "x"
+                    to: passwordField.x + 4
+                    duration: 40
+                }
+                NumberAnimation {
+                    target: passwordField
+                    property: "x"
+                    to: passwordField.x - 4
+                    duration: 40
+                }
+                NumberAnimation {
+                    target: passwordField
+                    property: "x"
+                    to: passwordField.x
+                    duration: 40
+                }
             }
 
             Row {
@@ -145,7 +163,6 @@ Item {
                     clip: true
                     focus: root.showCondition
 
-                    // Placeholder
                     Text {
                         anchors.fill: parent
                         anchors.verticalCenter: parent.verticalCenter
@@ -159,13 +176,12 @@ Item {
 
                     Keys.onReturnPressed: {
                         if (text !== "")
-                            doAuthenticate()
+                            doAuthenticate();
                     }
                     Keys.onEscapePressed: doCancel()
                 }
             }
 
-            // Wrong password indicator
             Rectangle {
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
@@ -175,11 +191,14 @@ Item {
                 radius: 1
                 color: "#ff3b30"
                 opacity: PolkitAgent.lastAuthFailed ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: 200 } }
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 200
+                    }
+                }
             }
         }
 
-        // ── Error message ─────────────────────────────────────────────
         Text {
             visible: PolkitAgent.lastAuthFailed
             text: "Incorrect password. Try again."
@@ -187,16 +206,18 @@ Item {
             font.family: root.textFontFamily
             font.pixelSize: 11
             opacity: PolkitAgent.lastAuthFailed ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 200 } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 200
+                }
+            }
         }
 
-        // ── Buttons ───────────────────────────────────────────────────
         Row {
             width: parent.width
             spacing: 8
             layoutDirection: Qt.RightToLeft
 
-            // Authenticate button
             Rectangle {
                 width: 120
                 height: 32
@@ -204,11 +225,13 @@ Item {
                 color: {
                     if (PolkitAgent.authenticating)
                         return Qt.rgba(1, 1, 1, 0.08);
-                    return authMouse.pressed
-                        ? Qt.rgba(0.22, 0.52, 1, 0.9)
-                        : Qt.rgba(0.22, 0.52, 1, 0.75);
+                    return authMouse.pressed ? Qt.rgba(0.22, 0.52, 1, 0.9) : Qt.rgba(0.22, 0.52, 1, 0.75);
                 }
-                Behavior on color { ColorAnimation { duration: 120 } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 120
+                    }
+                }
 
                 Row {
                     anchors.centerIn: parent
@@ -225,7 +248,8 @@ Item {
 
                         RotationAnimation on rotation {
                             running: PolkitAgent.authenticating
-                            from: 0; to: 360
+                            from: 0
+                            to: 360
                             duration: 1000
                             loops: Animation.Infinite
                         }
@@ -249,15 +273,16 @@ Item {
                 }
             }
 
-            // Cancel button
             Rectangle {
                 width: 80
                 height: 32
                 radius: 10
-                color: cancelMouse.pressed
-                    ? Qt.rgba(1, 1, 1, 0.12)
-                    : Qt.rgba(1, 1, 1, 0.07)
-                Behavior on color { ColorAnimation { duration: 120 } }
+                color: cancelMouse.pressed ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.07)
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 120
+                    }
+                }
 
                 Text {
                     anchors.centerIn: parent
@@ -277,9 +302,9 @@ Item {
         }
     }
 
-    // ── Logic ─────────────────────────────────────────────────────────────
     function doAuthenticate() {
-        if (passwordInput.text === "") return;
+        if (passwordInput.text === "")
+            return;
         PolkitAgent.authenticate(passwordInput.text);
         passwordInput.text = "";
     }
@@ -290,7 +315,6 @@ Item {
         root.closeRequested();
     }
 
-    // Auto-focus password field when shown
     onShowConditionChanged: {
         if (showCondition) {
             passwordInput.text = "";
@@ -298,7 +322,6 @@ Item {
         }
     }
 
-    // Watch for wrong password — shake the field
     Connections {
         target: PolkitAgent
         function onLastAuthFailedChanged() {

@@ -118,9 +118,6 @@ Item {
         const newDevice = findNewDevice(connected);
         connectedSignature = nextSignature;
 
-        // FIX: debounce notification — schedule via timer to fire only once
-        // even if multiple signals (onDevicesChanged, onConnectedChanged,
-        // Component.onCompleted) all call sync() in the same event loop tick.
         if (showNewConnection && newDevice && nextSignature.length > 0) {
             pendingDevice = newDevice;
             notifyDebounceTimer.restart();
@@ -147,10 +144,6 @@ Item {
         sync(false);
     }
 
-    // FIX: removed onDevicesChanged: sync(true) — device list changes are
-    // already handled by onConnectedChanged inside each delegate, so calling
-    // sync here as well caused duplicate notifications.
-
     Timer {
         id: baselineTimer
 
@@ -173,10 +166,6 @@ Item {
             visible: false
 
             property var bluetoothDevice: modelData
-
-            // FIX: removed Component.onCompleted sync(true) — this fired for
-            // every existing device on startup and on every list rebuild,
-            // causing extra notifications alongside onConnectedChanged.
 
             Component.onDestruction: Qt.callLater(function () {
                 root.sync(false);

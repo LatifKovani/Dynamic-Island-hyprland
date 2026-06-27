@@ -17,7 +17,6 @@ Item {
     property string timeFontFamily: activeConfig.timeFontFamily
     property bool showCondition: false
     property bool showSecondaryText: true
-    // Toggle showing the clock in this layer via user config (default true)
     property bool showTimeLayer: (activeConfig.showTimeInCustomInfoLayer !== undefined) ? activeConfig.showTimeInCustomInfoLayer : true
     property bool recordingActive: false
     property real transitionProgress: 0
@@ -164,7 +163,7 @@ Item {
                                 return "#ff3b30";
                             return "white";
                         }
-                        readonly property color emptyColor: Qt.rgba(1, 1, 1, 0.56)   // always the same
+                        readonly property color emptyColor: Qt.rgba(1, 1, 1, 0.56)
 
                         Rectangle {
                             id: batteryBody

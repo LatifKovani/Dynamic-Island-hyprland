@@ -46,11 +46,8 @@ Item {
     property bool brightnessSetterRunning: false
     property bool volumeSetterRunning: false
     property bool sliderIntroPending: false
-
     property bool wifiPanelOpen: false
     property bool bluetoothPanelOpen: false
-
-    // ── Battery drawer ────────────────────────────────────────────
     property bool batteryDrawerOpen: false
     property bool batteryDrawerDragging: false
     property real batteryDrawerProgress: 0
@@ -70,22 +67,15 @@ Item {
     property string batteryModeError: ""
     property string batteryModeLastCommandOutput: ""
     property int batteryModeRefreshPollsRemaining: 0
-
-    // ── Night light ───────────────────────────────────────────────
     property bool nightLightEnabled: false
     property bool nightLightBusy: false
     property int nightLightTemperature: 4500
-
-    // ── Focus / DND ───────────────────────────────────────────────
     property bool focusEnabled: false
     property bool focusBusy: false
-
-    // ── Connectivity ──────────────────────────────────────────────
     property string wifiLocalInfoMessage: ""
     property string wifiLocalError: ""
     property string wifiPendingPasswordSsid: ""
     property string wifiPendingPasswordValue: ""
-
     property string bluetoothInfoMessage: ""
     property string bluetoothError: ""
     property string bluetoothPairAndConnectPath: ""
@@ -95,12 +85,8 @@ Item {
     readonly property var bluetoothPairingAgent: BluetoothPairingAgent
     readonly property var wifiNetworks: wifiController ? wifiController.networks : null
 
-    // ── Signal: request a notification capsule from DynamicIslandWindow ──
-    // Connect this in DynamicIslandWindow:
-    //   controlCenterLoader.item.requestNotification.connect(islandContainer.showNotificationCapsule)
     signal requestNotification(string appName, string summary, string body)
 
-    // ── Style tokens ──────────────────────────────────────────────
     readonly property real sliderKnobSize: 24
     readonly property color panelColor: StyleTokens.panel
     readonly property color moduleColor: StyleTokens.module
@@ -115,8 +101,6 @@ Item {
     readonly property color buttonFill: StyleTokens.buttonFill
     readonly property color buttonFillHover: StyleTokens.buttonFillHover
     readonly property color buttonFillPressed: StyleTokens.buttonFillPressed
-
-    // ── Glyphs ────────────────────────────────────────────────────
     readonly property string wifiGlyph: "\uf1eb"
     readonly property string bluetoothGlyph: "\uf294"
     readonly property string chargingIconGlyph: "\uf0e7"
@@ -125,24 +109,14 @@ Item {
     readonly property string nightLightGlyph: "\uf185"
     readonly property string focusGlyph: "\uf186"
     readonly property var batteryModeGlyphs: ["\uf0e7", "\uf241", "\uf4a4"]
-
-    // ── Battery drawer geometry ───────────────────────────────────
     readonly property real batteryDrawerHandleHeight: 20
     readonly property real batteryDrawerContentGap: 8
-
-    // Battery row: carousel card + night light card side-by-side (same height)
-    // Focus card alone on second row at half width
     readonly property real batteryModeCardHeight: 80
     readonly property real toggleCardHeight: 80
     readonly property real toggleCardGap: 8
-
-    // Content = row1 (batteryModeCardHeight) + gap + row2 (toggleCardHeight)
     readonly property real batteryDrawerContentHeight: batteryModeCardHeight + toggleCardGap + toggleCardHeight
-
     readonly property real controlCenterExtraHeight: 12 + batteryDrawerHandleHeight + batteryDrawerProgress * (batteryDrawerContentGap + batteryDrawerContentHeight)
     readonly property real controlCenterMaximumExtraHeight: 12 + batteryDrawerHandleHeight + batteryDrawerContentGap + batteryDrawerContentHeight
-
-    // ── Connectivity state ────────────────────────────────────────
     readonly property bool bluetoothAvailable: !!bluetoothAdapter
     readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
     readonly property var bluetoothDeviceValues: bluetoothAdapter ? bluetoothAdapter.devices.values : []
@@ -179,7 +153,6 @@ Item {
     readonly property string bluetoothAvailabilityMessage: bluetoothAvailable ? "" : "No Bluetooth adapter is available."
     readonly property string batteryModeStatusText: buildBatteryModeStatusText()
 
-    // ── Helpers ───────────────────────────────────────────────────
     function clamp01(value) {
         return Math.max(0, Math.min(1, value));
     }
@@ -189,7 +162,6 @@ Item {
         return String(value).trim();
     }
 
-    // ── Battery mode ──────────────────────────────────────────────
     function batteryModeLabel(index) {
         if (index <= 0)
             return "Power Saver";
@@ -380,7 +352,7 @@ Item {
             nightLightEnableProcess.running = true;
         }
     }
-    // ── Focus / DND ───────────────────────────────────────────────
+
     function toggleFocus() {
         if (focusBusy)
             return;
@@ -392,7 +364,6 @@ Item {
         }
     }
 
-    // ── Wifi helpers ──────────────────────────────────────────────
     function clearWifiPrompt() {
         wifiPendingPasswordSsid = "";
         wifiPendingPasswordValue = "";
@@ -645,7 +616,6 @@ Item {
         syncVolumeFromLevel(volumeLevel);
     }
 
-    // ── Bluetooth helpers ─────────────────────────────────────────
     function bluetoothDeviceName(device) {
         if (!device)
             return "Unknown device";
@@ -786,7 +756,6 @@ Item {
         device.forget();
     }
 
-    // ── Anchors / visibility ──────────────────────────────────────
     anchors.fill: parent
     anchors.margins: 12
     opacity: showCondition ? 1 : 0
@@ -825,7 +794,6 @@ Item {
         focusStateProcess.running = true;
     }
 
-    // ── Behaviors ─────────────────────────────────────────────────
     Behavior on opacity {
         NumberAnimation {
             duration: showCondition ? 240 : 100
@@ -854,7 +822,6 @@ Item {
             easing.type: Easing.OutCubic
         }
     }
-    // Add this Process to query current DND state
     Process {
         id: focusStateProcess
         command: ["swaync-client", "--get-dnd"]
@@ -866,7 +833,6 @@ Item {
             }
         }
     }
-    // ── Process: night light enable — send IPC to running daemon ──
     Process {
         id: nightLightEnableProcess
         command: ["hyprctl", "hyprsunset", "temperature", controlCenter.nightLightTemperature.toString()]
@@ -882,7 +848,6 @@ Item {
         }
     }
 
-    // ── Process: night light disable — restore identity via IPC ──
     Process {
         id: nightLightDisableProcess
         command: ["hyprctl", "hyprsunset", "identity"]
@@ -893,7 +858,6 @@ Item {
             controlCenter.requestNotification("Night Light", "Night Light disabled", "");
         }
     }
-    // ── Process: focus enable (swaync DND) ───────────────────────
     Process {
         id: focusEnableProcess
         command: ["swaync-client", "-dn"]
@@ -909,7 +873,6 @@ Item {
         }
     }
 
-    // ── Process: focus disable (swaync DND) ──────────────────────
     Process {
         id: focusDisableProcess
         command: ["swaync-client", "-df"]
@@ -921,7 +884,6 @@ Item {
         }
     }
 
-    // ── SystemServices connections ────────────────────────────────
     Connections {
         target: SystemServices
         function onTlpStateReady(available, profile, output, errorString) {
@@ -954,7 +916,6 @@ Item {
         }
     }
 
-    // ── Timers ────────────────────────────────────────────────────
     Timer {
         id: brightnessApplyTimer
         interval: 55
@@ -1048,13 +1009,9 @@ Item {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // UI
-    // ══════════════════════════════════════════════════════════════
     Item {
         anchors.fill: parent
 
-        // ── Normal control center view ────────────────────────────
         Column {
             id: mainView
             anchors.fill: parent
@@ -1068,7 +1025,6 @@ Item {
                 }
             }
 
-            // ── Header row ────────────────────────────────────────
             Item {
                 width: parent.width
                 height: 28
@@ -1103,14 +1059,12 @@ Item {
                     }
                 }
 
-                // ── Header battery (icon only, no external % text) ─
                 Row {
                     anchors.right: parent.right
                     anchors.rightMargin: 2
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 5
 
-                    // iOS-style battery shape with number inside
                     Item {
                         readonly property int tipW: 2
                         readonly property int tipH: 5
@@ -1161,7 +1115,6 @@ Item {
                                 }
                             }
 
-                            // Charging: number + bolt inside
                             Row {
                                 visible: isCharging
                                 anchors.centerIn: parent
@@ -1195,7 +1148,6 @@ Item {
                             }
                         }
 
-                        // Tip nub
                         Rectangle {
                             width: parent.tipW
                             height: parent.tipH
@@ -1214,7 +1166,6 @@ Item {
                 }
             }
 
-            // ── Connectivity cards ────────────────────────────────
             Item {
                 width: parent.width
                 height: 80
@@ -1446,7 +1397,6 @@ Item {
                 }
             }
 
-            // ── Battery / Night Light / Focus drawer ──────────────
             Item {
                 id: batteryDrawer
                 readonly property real cardWidth: parent.width
@@ -1458,7 +1408,6 @@ Item {
                 height: controlCenter.batteryDrawerHandleHeight + controlCenter.batteryDrawerProgress * openDistance
                 clip: true
 
-                // ── Content that slides in ────────────────────────
                 Item {
                     id: batteryDrawerContent
                     anchors.left: parent.left
@@ -1467,7 +1416,6 @@ Item {
                     y: -height + controlCenter.batteryDrawerProgress * height
                     opacity: Math.min(1, controlCenter.batteryDrawerProgress * 1.35)
 
-                    // ── Row 1: Battery carousel  |  Night Light ───
                     Item {
                         id: drawerRow1
                         anchors.left: parent.left
@@ -1475,7 +1423,6 @@ Item {
                         anchors.top: parent.top
                         height: controlCenter.batteryModeCardHeight
 
-                        // Battery carousel card (left half)
                         Rectangle {
                             id: batteryModeCard
                             anchors.left: parent.left
@@ -1646,7 +1593,6 @@ Item {
                             }
                         }
 
-                        // Night Light toggle card (right half)
                         Rectangle {
                             anchors.right: parent.right
                             anchors.top: parent.top
@@ -1655,7 +1601,6 @@ Item {
                             radius: 20
                             color: StyleTokens.connectivityCard
 
-                            // Full-card MouseArea at z:0 (below all children)
                             MouseArea {
                                 anchors.fill: parent
                                 z: 0
@@ -1663,7 +1608,6 @@ Item {
                                 onClicked: controlCenter.toggleNightLight()
                             }
 
-                            // Icon top-left
                             Text {
                                 anchors.left: parent.left
                                 anchors.leftMargin: 14
@@ -1675,7 +1619,6 @@ Item {
                                 font.family: controlCenter.iconFontFamily
                                 z: 1
                             }
-                            // Toggle switch top-right
                             Rectangle {
                                 id: nightLightSwitch
                                 anchors.right: parent.right
@@ -1708,7 +1651,6 @@ Item {
                                     }
                                 }
                             }
-                            // Label bottom-left
                             Text {
                                 anchors.left: parent.left
                                 anchors.leftMargin: 14
@@ -1721,7 +1663,6 @@ Item {
                                 font.weight: Font.DemiBold
                                 z: 1
                             }
-                            // Status text bottom
                             Text {
                                 anchors.left: parent.left
                                 anchors.leftMargin: 14
@@ -1753,7 +1694,6 @@ Item {
                             onClicked: controlCenter.toggleFocus()
                         }
 
-                        // Icon top-left — matches Night Light layout
                         Text {
                             anchors.left: parent.left
                             anchors.leftMargin: 14
@@ -1766,7 +1706,6 @@ Item {
                             z: 1
                         }
 
-                        // Toggle switch top-right — matches Night Light layout
                         Rectangle {
                             id: focusSwitch
                             anchors.right: parent.right
@@ -1800,7 +1739,6 @@ Item {
                             }
                         }
 
-                        // Label bottom-left — matches Night Light layout
                         Text {
                             anchors.left: parent.left
                             anchors.leftMargin: 14
@@ -1814,7 +1752,6 @@ Item {
                             z: 1
                         }
 
-                        // Status bottom
                         Text {
                             anchors.left: parent.left
                             anchors.leftMargin: 14
@@ -1830,7 +1767,6 @@ Item {
                     }
                 }
 
-                // Tunnel shade (top edge shadow when open)
                 Rectangle {
                     id: batteryDrawerTunnelShade
                     anchors.left: parent.left
@@ -1851,7 +1787,6 @@ Item {
                     }
                 }
 
-                // ── Handle ────────────────────────────────────────
                 Item {
                     id: batteryDrawerHandle
                     anchors.left: parent.left
@@ -1918,7 +1853,6 @@ Item {
                 }
             }
 
-            // ── Brightness slider ─────────────────────────────────
             ControlSliderCard {
                 id: brightnessCard
                 width: parent.width
@@ -1952,7 +1886,6 @@ Item {
                 onCancelRequested: SystemServices.requestBrightness()
             }
 
-            // ── Volume slider ─────────────────────────────────────
             ControlSliderCard {
                 id: volumeCard
                 width: parent.width
@@ -1987,7 +1920,6 @@ Item {
             }
         }
 
-        // ── Connectivity sub-page (replaces main view) ────────────
         Item {
             anchors.fill: parent
             visible: controlCenter.anyConnectivityPanelOpen

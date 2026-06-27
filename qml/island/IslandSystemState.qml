@@ -497,7 +497,6 @@ Item {
             if (pendingStatus === root._lastChargeStatus)
                 return;
             root._lastChargeStatus = pendingStatus;
-            // Update bolt icon and notification at the same time
             root.isCharging = (pendingStatus === "charging");
             if (pendingStatus === "charging") {
                 root._lowBatteryNotified = false;
@@ -578,14 +577,12 @@ Item {
                 chargeNotificationDebounce.restart();
             }
 
-            // Reset low battery tracking when charger is plugged in
             if (direction === "charging") {
                 root._lowBatteryNotified = false;
                 root._criticalBatteryActive = false;
                 return;
             }
 
-            // Milestone notifications: 25, 20, 15, 10
             const milestones = [25, 20, 15, 10];
             for (const m of milestones) {
                 if (capacity <= m && !root._notifiedMilestones[m]) {
@@ -593,11 +590,10 @@ Item {
                         [m]: true
                     });
                     root.transientRequested("\uf244", capacity / 100.0, "Battery at " + m + "%");
-                    break; // one notification per event
+                    break;
                 }
             }
 
-            // Below 10% — pin the notification (don't auto-hide)
             if (capacity <= 10) {
                 root._criticalBatteryActive = true;
                 root.criticalBatteryRequested("\uf244", capacity / 100.0, "Battery critically low — " + capacity + "%");

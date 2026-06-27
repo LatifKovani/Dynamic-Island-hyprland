@@ -14,15 +14,13 @@ Item {
 
     readonly property string resolvedArtSource: preloadedArtSource !== "" ? preloadedArtSource : currentArtUrl
 
-    // ── sizes (parent capsule is 230 × 40) ───────────────────────────
     readonly property real artSize: 28
     readonly property real artMarginLeft: 7
     readonly property real cavaMarginRight: 9
-    // bar geometry
     readonly property int numBars: 6
-    readonly property real bW: 2   // bar width
-    readonly property real bGap: 3   // bar gap
-    readonly property real cavaW: numBars * bW + (numBars - 1) * bGap   // 39 px
+    readonly property real bW: 2
+    readonly property real bGap: 3
+    readonly property real cavaW: numBars * bW + (numBars - 1) * bGap
 
     opacity: showCondition ? 1 : 0
     Behavior on opacity {
@@ -32,7 +30,6 @@ Item {
         }
     }
 
-    // ── helpers ───────────────────────────────────────────────────────
     function levelCount() {
         if (!cavaLevels)
             return 0;
@@ -46,7 +43,6 @@ Item {
         return isNaN(v) ? 0 : Math.max(0, Math.min(1, v));
     }
 
-    // ── Album art ─────────────────────────────────────────────────────
     Item {
         id: artWrapper
         x: root.artMarginLeft
@@ -74,7 +70,6 @@ Item {
             }
         }
 
-        // Fallback when no art
         Rectangle {
             anchors.fill: parent
             radius: 5
@@ -91,7 +86,6 @@ Item {
         }
     }
 
-    // ── Cava bars (inlined — no external file dependency) ────────────
     Row {
         id: cavaRow
         anchors {

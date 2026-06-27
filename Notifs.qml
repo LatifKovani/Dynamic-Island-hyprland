@@ -6,18 +6,15 @@ import Quickshell.Services.Notifications
 Singleton {
     id: root
 
-    // ── DND ───────────────────────────────────────────────────────────────────
     property bool dndEnabled: false
 
-    // ── Notification list ─────────────────────────────────────────────────────
-    readonly property var list: notifList      // all (including closed)
+    readonly property var list: notifList
     readonly property var active: notifList.filter(n => !n.closed)
 
     property var notifList: []
 
     signal notificationAdded(var notif)
 
-    // ── DBus server ───────────────────────────────────────────────────────────
     NotificationServer {
         id: server
 
@@ -28,7 +25,6 @@ Singleton {
         imageSupported: true
 
         onNotification: function (notif) {
-            // Must set tracked=true or Quickshell drops it immediately
             notif.tracked = true;
 
             if (root.dndEnabled) {
@@ -63,8 +59,6 @@ Singleton {
             });
         }
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     function _markClosed(notifId) {
         const idx = root.notifList.findIndex(n => n.id === notifId);
