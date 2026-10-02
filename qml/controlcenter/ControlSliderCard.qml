@@ -4,10 +4,10 @@ import IslandBackend
 Rectangle {
     id: root
 
-    signal interactionStarted()
+    signal interactionStarted
     signal valueMoved(real value)
-    signal commitRequested()
-    signal cancelRequested()
+    signal commitRequested
+    signal cancelRequested
 
     property string title: ""
     property string iconText: ""
@@ -78,9 +78,7 @@ Rectangle {
             }
 
             Rectangle {
-                width: root.value <= 0.001
-                    ? 0
-                    : Math.max(34, Math.min(sliderTrack.width, sliderTrack.width * root.value + 1))
+                width: root.value <= 0.001 ? 0 : Math.max(34, Math.min(sliderTrack.width, sliderTrack.width * root.value + 1))
                 height: parent.height
                 radius: parent.radius
                 color: StyleTokens.textPrimary
@@ -104,11 +102,11 @@ Rectangle {
                     root.valueMoved(root.clamp01(mouseX / width));
                 }
 
-                onPressed: function(mouse) {
+                onPressed: function (mouse) {
                     root.interactionStarted();
                     update(mouse.x);
                 }
-                onPositionChanged: function(mouse) {
+                onPositionChanged: function (mouse) {
                     if (pressed)
                         update(mouse.x);
                 }
