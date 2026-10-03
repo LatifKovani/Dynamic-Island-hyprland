@@ -60,6 +60,27 @@ PanelWindow {
         }
         Region {
             intersection: Intersection.Combine
+            x: Math.floor(statusCircle.x)
+            y: Math.floor(statusCircle.y)
+            width: statusCircle.visible ? Math.ceil(statusCircle.width) : 0
+            height: statusCircle.visible ? Math.ceil(statusCircle.height) : 0
+        }
+        Region {
+            intersection: Intersection.Combine
+            x: Math.floor(albumCircle.x)
+            y: Math.floor(albumCircle.y)
+            width: albumCircle.visible ? Math.ceil(albumCircle.width) : 0
+            height: albumCircle.visible ? Math.ceil(albumCircle.height) : 0
+        }
+        Region {
+            intersection: Intersection.Combine
+            x: Math.floor(playerCard.x)
+            y: Math.floor(playerCard.y)
+            width: playerCard.visible ? Math.ceil(playerCard.width) : 0
+            height: playerCard.visible ? Math.ceil(playerCard.height) : 0
+        }
+        Region {
+            intersection: Intersection.Combine
             x: Math.floor(wifiConnectivityDetailShell.x)
             y: Math.floor(wifiConnectivityDetailShell.y)
             width: wifiConnectivityDetailShell.visible ? Math.ceil(wifiConnectivityDetailShell.width) : 0
@@ -392,6 +413,13 @@ PanelWindow {
         property string splitOriginSide: "none"
         property string restingState: "normal"
         property bool expandedByPlayerAutoOpen: false
+        property bool playerCardOpen: false
+        property bool playerCardAutoOpened: false
+        property bool playerCardHovered: false
+        readonly property real circleSize: 34
+        readonly property real circleGap: 14
+        readonly property real playerCardWidth: 410
+        readonly property real playerCardHeight: 184
         property string alcoveReturnState: "normal"
         property string workspaceReturnState: ""
         property string preloadedArtUrl: ""
@@ -419,6 +447,13 @@ PanelWindow {
         readonly property bool customSwipeVisible: !root.overviewVisible && hasCustomLeftItems && (capsuleMouseArea.sideSwipeInteractive ? swipeTransitionProgress < 0 : (islandState === "custom" || (islandState === "normal" && swipeTransitionProgress < 0) || (islandState === "split" && splitOriginSide === "left") || (islandState === "long_capsule" && (workspaceOriginSide === "left" || swipeTransitionProgress < 0))))
         readonly property bool lyricsSwipeVisible: !root.overviewVisible && (capsuleMouseArea.sideSwipeInteractive ? swipeTransitionProgress >= 0 : (islandState === "lyrics" || (islandState === "normal" && swipeTransitionProgress >= 0) || (islandState === "split" && splitOriginSide === "right") || (islandState === "long_capsule" && (workspaceOriginSide === "right" || swipeTransitionProgress > 0))))
         readonly property bool expandedLayerVisible: !root.overviewVisible && islandState === "expanded"
+        readonly property bool calendarLayerVisible: !root.overviewVisible && islandState === "calendar"
+        readonly property bool smallPillState: islandState === "normal" || islandState === "custom" || islandState === "lyrics" || islandState === "calendar" || islandState === "split" || islandState === "long_capsule"
+        readonly property bool statusCircleVisible: !root.overviewVisible && (smallPillState || (islandState === "control_center" && !root.anyConnectivityDetailMounted))
+        readonly property bool albumCircleVisible: !root.overviewVisible && smallPillState && activePlayer !== null && !playerCardOpen
+        readonly property bool playerCardAllowed: !root.overviewVisible && (smallPillState || islandState === "notification" || islandState === "bluetooth_expanded")
+        readonly property bool playerCardVisible: playerCardOpen && playerCardAllowed
+        readonly property string circleArtSource: preloadedArtReady && artPreloader.source ? artPreloader.source : currentArtUrl
         readonly property bool alcoveMusicLayerVisible: !root.overviewVisible && islandState === "alcove_music"
         readonly property bool bluetoothExpandedLayerVisible: !root.overviewVisible && islandState === "bluetooth_expanded"
         readonly property bool notificationLayerVisible: !root.overviewVisible && islandState === "notification"
@@ -453,7 +488,13 @@ PanelWindow {
                     root.closeAllConnectivityDetails();
             }
         }
+        onActivePlayerChanged: {
+            if (!activePlayer && playerCardOpen)
+                closePlayerCard();
+        }
         onIslandStateChanged: {
+            if (playerCardOpen && !playerCardAllowed)
+                closePlayerCard();
             if (islandState !== "lock_unlock" && (lockUnlockResetting || skipWidthAnimation)) {
                 lockUnlockResetTimer.stop();
                 lockUnlockResetting = false;
@@ -476,7 +517,7 @@ PanelWindow {
 
         IslandMprisController {
             id: mediaController
-            expanded: islandContainer.islandState === "expanded"
+            expanded: islandContainer.islandState === "expanded" || islandContainer.playerCardVisible
         }
 
         Image {
@@ -593,7 +634,7 @@ PanelWindow {
                     autoHideTimer.stop();
                     smartRestoreState();
                 } else {
-                    showExpandedPlayer(false);
+                    togglePlayerCard();
                 }
                 return;
             case "toggleAlcoveMusicCapsule":
@@ -603,11 +644,12 @@ PanelWindow {
                     showAlcoveMusicCapsule();
                 return;
             case "openExpandedPlayer":
-                showExpandedPlayer(false);
+                openPlayerCard(false);
                 return;
             case "closeExpandedPlayer":
                 if (islandState === "expanded")
                     smartRestoreState();
+                closePlayerCard();
                 return;
             case "toggleControlCenter":
                 if (islandState === "control_center")
@@ -1056,6 +1098,74 @@ PanelWindow {
             stopAutoHideTimer();
         }
 
+        function showCalendarCapsule() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "calendar";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            expandedByPlayerAutoOpen = false;
+            stopAutoHideTimer();
+        }
+
+        function openPlayerCard(autoOpened) {
+            if (!activePlayer)
+                return;
+            playerCardOpen = true;
+            playerCardAutoOpened = autoOpened;
+            playerCardCloseTimer.interval = autoOpened ? 3500 : 3000;
+            playerCardCloseTimer.restart();
+        }
+
+        function closePlayerCard() {
+            playerCardOpen = false;
+            playerCardAutoOpened = false;
+            playerCardCloseTimer.stop();
+        }
+
+        function togglePlayerCard() {
+            if (playerCardOpen)
+                closePlayerCard();
+            else
+                openPlayerCard(false);
+        }
+
+        function playerCardHoverChanged(isHovered) {
+            playerCardHovered = isHovered;
+            if (!playerCardOpen)
+                return;
+            if (isHovered) {
+                playerCardCloseTimer.stop();
+            } else {
+                playerCardCloseTimer.interval = 700;
+                playerCardCloseTimer.restart();
+            }
+        }
+
+        function circleHoverChanged(isHovered) {
+            if (isHovered) {
+                hoverCloseTimer.stop();
+                return;
+            }
+            if (islandState === "calendar")
+                hoverCloseTimer.restart();
+        }
+
+        function showNookTab(tab) {
+            showExpandedPlayer(false);
+            if (expandedPlayerLoader.item)
+                expandedPlayerLoader.item.activeTab = tab;
+        }
+
+        function toggleNookTab(tab) {
+            if (islandState === "expanded" && expandedPlayerLoader.item && expandedPlayerLoader.item.activeTab === tab) {
+                autoHideTimer.stop();
+                smartRestoreState();
+            } else {
+                showNookTab(tab);
+            }
+        }
+
         function showExpandedPlayer(autoOpened) {
             cancelSideSwipeSettle();
             abortSideTransientMode();
@@ -1215,6 +1325,18 @@ PanelWindow {
         }
 
         Timer {
+            id: playerCardCloseTimer
+            interval: 700
+            onTriggered: {
+                if (islandContainer.playerCardHovered || islandContainer.playerProgressDragging) {
+                    if (islandContainer.playerProgressDragging)
+                        restart();
+                    return;
+                }
+                islandContainer.closePlayerCard();
+            }
+        }
+        Timer {
             id: autoHideTimer
             interval: islandContainer.defaultAutoHideInterval
             onTriggered: islandContainer.smartRestoreState()
@@ -1261,11 +1383,11 @@ PanelWindow {
             if (userConfig.disableAutoExpandOnTrackChange)
                 return;
             if (currentTrack !== "" && islandState !== "control_center" && islandState !== "notification" && islandState !== "bluetooth_expanded" && islandState !== "lock_unlock") {
-                if (islandState === "expanded" && !expandedByPlayerAutoOpen)
-                    return;
                 if (islandState === "alcove_music")
                     return;
-                showExpandedPlayer(true);
+                if (playerCardOpen && !playerCardAutoOpened)
+                    return;
+                openPlayerCard(true);
             }
         }
         onCurrentArtUrlChanged: {
@@ -1273,6 +1395,98 @@ PanelWindow {
                 islandContainer.lastArtUrl = currentArtUrl;
                 islandContainer.preloadedArtReady = false;
                 artPreloader.source = currentArtUrl;
+            }
+        }
+
+        StatusCircle {
+            id: statusCircle
+            z: 5
+            width: islandContainer.circleSize
+            height: islandContainer.circleSize
+            x: mainCapsule.x + mainCapsule.width + islandContainer.circleGap
+            y: 4 + (38 - height) / 2
+            iconFontFamily: root.iconFontFamily
+            batteryCapacity: islandContainer.batteryCapacity
+            isCharging: islandContainer.isCharging
+            wifiConnected: WifiController.enabled && WifiController.currentSsid !== ""
+            opacity: islandContainer.statusCircleVisible ? 1 : 0
+            visible: opacity > 0.01
+            enabled: islandContainer.statusCircleVisible
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 220
+                    easing.type: Easing.OutQuad
+                }
+            }
+            onClicked: islandContainer.handleConfiguredClickAction("toggleControlCenter")
+            onHoveredChanged: islandContainer.circleHoverChanged(hovered)
+            Component.onCompleted: WifiController.refreshState()
+        }
+
+        AlbumCircle {
+            id: albumCircle
+            z: 5
+            width: islandContainer.circleSize
+            height: islandContainer.circleSize
+            x: mainCapsule.x - islandContainer.circleGap - width
+            y: 4 + (38 - height) / 2
+            iconFontFamily: root.iconFontFamily
+            artSource: islandContainer.circleArtSource
+            opacity: islandContainer.albumCircleVisible ? 1 : 0
+            visible: opacity > 0.01
+            enabled: islandContainer.albumCircleVisible
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 220
+                    easing.type: Easing.OutQuad
+                }
+            }
+            onClicked: islandContainer.openPlayerCard(false)
+            onHoveredChanged: islandContainer.circleHoverChanged(hovered)
+        }
+
+        Rectangle {
+            id: playerCard
+            z: 5
+            width: islandContainer.playerCardWidth
+            height: islandContainer.playerCardHeight
+            x: mainCapsule.x - islandContainer.circleGap - width
+            y: 4
+            radius: 34
+            color: StyleTokens.black
+            clip: true
+            opacity: islandContainer.playerCardVisible ? 1 : 0
+            visible: opacity > 0.01
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 220
+                    easing.type: Easing.OutQuad
+                }
+            }
+
+            HoverHandler {
+                onHoveredChanged: islandContainer.playerCardHoverChanged(hovered)
+            }
+
+            Loader {
+                anchors.fill: parent
+                active: islandContainer.playerCardVisible || playerCard.visible
+                asynchronous: false
+                sourceComponent: Component {
+                    PlayerCardLayer {
+                        showCondition: islandContainer.playerCardVisible
+                        activePlayer: islandContainer.activePlayer
+                        artSource: islandContainer.circleArtSource
+                        currentTrack: islandContainer.currentTrack
+                        currentArtist: islandContainer.currentArtist
+                        timePlayed: islandContainer.timePlayed
+                        timeTotal: islandContainer.timeTotal
+                        trackProgress: islandContainer.trackProgress
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        onProgressDraggingChanged: islandContainer.playerProgressDragging = progressDragging
+                    }
+                }
             }
         }
 
@@ -1319,6 +1533,8 @@ PanelWindow {
                     return 600;
                 case "polkit_auth":
                     return 420;
+                case "calendar":
+                    return 230;
                 case "expanded":
                     return 620;
                 case "alcove_music":
@@ -1355,6 +1571,8 @@ PanelWindow {
                     return 480;
                 case "polkit_auth":
                     return 260;
+                case "calendar":
+                    return 112;
                 case "expanded":
                     return 192;
                 case "alcove_music":
@@ -1388,6 +1606,8 @@ PanelWindow {
                 case "ai_translate":
                     return 34;
                 case "polkit_auth":
+                    return 34;
+                case "calendar":
                     return 34;
                 case "expanded":
                     return 40;
@@ -1495,10 +1715,10 @@ PanelWindow {
                 onEntered: {
                     hoverCloseTimer.stop();
                     if (islandContainer.islandState === "normal" || islandContainer.islandState === "custom")
-                        islandContainer.showExpandedPlayer(false);
+                        islandContainer.showCalendarCapsule();
                 }
                 onExited: {
-                    if (islandContainer.islandState === "expanded" && islandContainer.expandedByPlayerAutoOpen === false && !islandContainer.playerProgressDragging)
+                    if (islandContainer.islandState === "calendar" || (islandContainer.islandState === "expanded" && islandContainer.expandedByPlayerAutoOpen === false && !islandContainer.playerProgressDragging))
                         hoverCloseTimer.restart();
                 }
 
@@ -1507,7 +1727,7 @@ PanelWindow {
                     interval: 300
                     repeat: false
                     onTriggered: {
-                        if (islandContainer.islandState === "expanded" && islandContainer.expandedByPlayerAutoOpen === false && !islandContainer.playerProgressDragging)
+                        if (islandContainer.islandState === "calendar" || (islandContainer.islandState === "expanded" && islandContainer.expandedByPlayerAutoOpen === false && !islandContainer.playerProgressDragging))
                             islandContainer.smartRestoreState();
                     }
                 }
@@ -1542,7 +1762,7 @@ PanelWindow {
                     stage2SwipeArmed = inLyrics && mouse.button === Qt.LeftButton;
                     stage2SwipeMoved = false;
                     swipeArmed = mouse.button === Qt.LeftButton && islandContainer.canShowSideSwipe && !inLyrics;
-                    alcoveSwipeArmed = mouse.button === Qt.LeftButton && !root.overviewVisible && (islandContainer.islandState === "normal" || islandContainer.islandState === "custom" || islandContainer.islandState === "lyrics" || islandContainer.islandState === "expanded");
+                    alcoveSwipeArmed = mouse.button === Qt.LeftButton && !root.overviewVisible && (islandContainer.islandState === "normal" || islandContainer.islandState === "custom" || islandContainer.islandState === "lyrics" || islandContainer.islandState === "calendar" || islandContainer.islandState === "expanded");
                     swipeStartProgress = islandContainer.swipeTransitionProgress;
                     swipeLastX = mappedPoint.x;
                     swipeMoved = false;
@@ -1907,6 +2127,22 @@ PanelWindow {
                         onControlPressed: islandContainer.suppressCapsuleClick()
                         onSettingsPressed: islandContainer.showControlCenter()
                         onProgressDraggingChanged: islandContainer.playerProgressDragging = progressDragging
+                    }
+                }
+            }
+
+            Loader {
+                id: calendarLoader
+                anchors.fill: parent
+                active: islandContainer.calendarLayerVisible
+                asynchronous: false
+                visible: active
+                sourceComponent: Component {
+                    ClockCalendarLayer {
+                        timeText: timeObj.currentTime
+                        heroFontFamily: root.heroFontFamily
+                        textFontFamily: root.textFontFamily
+                        showCondition: islandContainer.calendarLayerVisible
                     }
                 }
             }

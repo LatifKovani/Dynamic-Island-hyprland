@@ -171,6 +171,22 @@ Scope {
             });
         }
 
+        function toggleTodo() {
+            shellRoot.forEachWindow(window => {
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
+                    return;
+                window.islandContainerRef.toggleNookTab("todo");
+            });
+        }
+
+        function togglePomodoro() {
+            shellRoot.forEachWindow(window => {
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
+                    return;
+                window.islandContainerRef.toggleNookTab("timer");
+            });
+        }
+
         function toggleAlcoveMusicCapsule() {
             shellRoot.forEachWindow(window => {
                 if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
