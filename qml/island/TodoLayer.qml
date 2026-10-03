@@ -22,13 +22,20 @@ Item {
         id: todoModel
     }
 
+    property var database: null
+
     function db() {
-        return LocalStorage.openDatabaseSync("QuickshellTodo", "1.0", "Todo list", 500000);
+        if (!database) {
+            database = LocalStorage.openDatabaseSync("QuickshellTodo", "1.0", "Todo list", 500000);
+            database.transaction(function (tx) {
+                tx.executeSql("CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, done INTEGER DEFAULT 0)");
+            });
+        }
+        return database;
     }
 
     function loadTodos() {
         db().transaction(function (tx) {
-            tx.executeSql("CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, done INTEGER DEFAULT 0)");
             const rs = tx.executeSql("SELECT id, text, done FROM todos ORDER BY id");
             for (let i = 0; i < rs.rows.length; i++) {
                 const r = rs.rows.item(i);

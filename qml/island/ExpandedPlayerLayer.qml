@@ -10,10 +10,17 @@ Item {
 
     signal controlPressed
     property bool progressDragging: false
+    property var database: null
 
     readonly property var userConfig: UserConfig
     function db() {
-        return LocalStorage.openDatabaseSync("QuickshellAlbumArt", "1.0", "Last album art", 1000);
+        if (!database) {
+            database = LocalStorage.openDatabaseSync("QuickshellAlbumArt", "1.0", "Last album art", 1000);
+            database.transaction(function (tx) {
+                tx.executeSql("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)");
+            });
+        }
+        return database;
     }
 
     property bool showCondition: false
@@ -82,7 +89,6 @@ Item {
 
     function saveLastArt() {
         db().transaction(function (tx) {
-            tx.executeSql("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)");
             tx.executeSql("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ["lastArt", _displayedSource]);
         });
     }

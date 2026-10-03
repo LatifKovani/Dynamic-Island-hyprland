@@ -508,6 +508,7 @@ PanelWindow {
             currentWorkspace: islandContainer.currentWs
             customSwipeActive: customSwipeLoader.active
             musicActive: islandContainer.alcoveMusicLayerVisible
+            monitorFocused: root.monitorFocused
         }
 
         Connections {

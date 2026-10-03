@@ -18,6 +18,7 @@ Item {
     property int currentWorkspace: 1
     property bool customSwipeActive: false
     property bool musicActive: false
+    property bool monitorFocused: true
     property real _ramTotalGb: 0
     property real _ramUsedGb: 0
     property var _notifiedMilestones: ({})
@@ -134,7 +135,7 @@ Item {
         id: ramPollTimer
         interval: 1000
         repeat: true
-        running: root.usesSystemStatsModule
+        running: root.monitorFocused && root.usesSystemStatsModule
         triggeredOnStart: true
         onTriggered: memInfoView.reload()
     }
@@ -517,7 +518,7 @@ Item {
         id: systemStatsPollTimer
         interval: 1000
         repeat: true
-        running: root.usesSystemStatsModule
+        running: root.monitorFocused && root.usesSystemStatsModule
         triggeredOnStart: true
         onTriggered: SystemServices.requestSystemStats()
     }
@@ -547,6 +548,11 @@ Item {
         function onCavaLevelsChanged() {
             root.cavaLevels = SystemServices.cavaLevels;
         }
+    }
+
+    onMonitorFocusedChanged: {
+        if (monitorFocused)
+            refreshMissingValues();
     }
 
     Connections {
