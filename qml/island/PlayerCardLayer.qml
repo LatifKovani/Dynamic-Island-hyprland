@@ -23,9 +23,40 @@ Item {
     readonly property string sourceText: activePlayer && activePlayer.identity ? activePlayer.identity : ""
     property real dragProgress: 0
 
-    function formatUs(us) {
-        const s = Math.max(0, Math.floor(us / 1000000));
+    function formatSeconds(value) {
+        const s = Math.max(0, Math.floor(Number(value) || 0));
         return Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
+    }
+
+    // Track length in seconds. Some players (browsers) leave player.length at 0 and only
+    // provide it in metadata, in microseconds.
+    readonly property real trackLength: {
+        const p = activePlayer;
+        if (!p)
+            return 0;
+        const l = Number(p.length) || 0;
+        if (l > 0)
+            return l;
+        const m = p.metadata ? Number(p.metadata["mpris:length"]) : 0;
+        return m > 0 ? m / 1000000 : 0;
+    }
+
+    function seekToFraction(f) {
+        const p = activePlayer;
+        if (!p || trackLength <= 0) {
+            console.log("[PlayerCard] seek ignored: no player or unknown length");
+            return;
+        }
+        const target = Math.max(0, Math.min(trackLength, f * trackLength));
+        console.log("[PlayerCard] seek to", target, "s  canSeek=", p.canSeek, "positionSupported=", p.positionSupported);
+        if (!p.canSeek)
+            return;
+        // Absolute position is more reliable than a relative seek(): position is only
+        // refreshed when polled, so "target - position" can be based on a stale value.
+        if (p.positionSupported)
+            p.position = target;
+        else
+            p.seek(target - p.position);
     }
 
     function togglePlayback() {
@@ -44,12 +75,33 @@ Item {
             activePlayer.play();
     }
 
+    // Browsers (Brave/Chrome) often report canGoPrevious = false for a single video;
+    // fall back to restarting the track, like most media widgets do.
+    function goPrevious() {
+        const p = activePlayer;
+        if (!p)
+            return;
+        if (p.canGoPrevious)
+            p.previous();
+        else if (p.canSeek && p.positionSupported)
+            p.position = 0;
+        else if (p.canSeek)
+            p.seek(-p.position);
+    }
+
+    Timer {
+        interval: 1000
+        repeat: true
+        running: root.showCondition && root.isPlaying && !!root.activePlayer
+        onTriggered: root.activePlayer.positionChanged()
+    }
+
     anchors.fill: parent
     opacity: showCondition ? 1 : 0
 
     Behavior on opacity {
         NumberAnimation {
-            duration: root.showCondition ? 250 : 120
+            duration: 110
             easing.type: Easing.InOutQuad
         }
     }
@@ -101,7 +153,7 @@ Item {
             color: "white"
             font.pixelSize: 19
             font.family: root.textFontFamily
-            font.weight: Font.SemiBold
+            font.weight: Font.DemiBold
             font.letterSpacing: -0.3
             elide: Text.ElideRight
         }
@@ -165,7 +217,7 @@ Item {
         Text {
             anchors.left: parent.left
             anchors.bottom: parent.bottom
-            text: seekArea.pressed ? root.formatUs(root.dragProgress * (root.activePlayer ? root.activePlayer.length : 0)) : root.timePlayed
+            text: seekArea.pressed ? root.formatSeconds(root.dragProgress * root.trackLength) : root.timePlayed
             color: Qt.rgba(1, 1, 1, 0.5)
             font.pixelSize: 11
             font.family: root.textFontFamily
@@ -182,8 +234,8 @@ Item {
         MouseArea {
             id: seekArea
             anchors.fill: parent
-            anchors.topMargin: -6
-            anchors.bottomMargin: 8
+            anchors.topMargin: -10
+            anchors.bottomMargin: 6
             hoverEnabled: true
             preventStealing: true
             cursorShape: Qt.PointingHandCursor
@@ -196,25 +248,21 @@ Item {
                 if (pressed)
                     root.dragProgress = fraction(m.x);
             }
-            onReleased: {
-                const p = root.activePlayer;
-                if (p && p.canSeek && p.length > 0)
-                    p.seek(Math.round(root.dragProgress * p.length) - p.position);
-            }
+            onReleased: root.seekToFraction(root.dragProgress)
         }
     }
 
     Row {
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 18
-        spacing: 34
+        id: controls
+        x: info.x + (info.width - width) / 2
+        y: root.height - height - 12
+        spacing: 12
 
         PlayerControlButton {
             kind: "previous"
             textFontFamily: root.textFontFamily
-            enabled: !!root.activePlayer
-            onClicked: root.activePlayer.previous()
+            enabled: !!root.activePlayer && (root.activePlayer.canGoPrevious || root.activePlayer.canSeek)
+            onClicked: root.goPrevious()
         }
         PlayerControlButton {
             kind: root.isPlaying ? "pause" : "play"
@@ -225,8 +273,11 @@ Item {
         PlayerControlButton {
             kind: "next"
             textFontFamily: root.textFontFamily
-            enabled: !!root.activePlayer
-            onClicked: root.activePlayer.next()
+            enabled: !!root.activePlayer && root.activePlayer.canGoNext
+            onClicked: {
+                if (root.activePlayer && root.activePlayer.canGoNext)
+                    root.activePlayer.next();
+            }
         }
     }
 }

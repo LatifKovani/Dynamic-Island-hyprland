@@ -70,7 +70,7 @@ Item {
             model: root.days
 
             delegate: Item {
-                width: 36
+                width: 28
                 height: 44
                 opacity: modelData.fade
 

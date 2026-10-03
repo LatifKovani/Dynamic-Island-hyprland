@@ -415,8 +415,15 @@ PanelWindow {
         property bool expandedByPlayerAutoOpen: false
         property bool playerCardOpen: false
         property bool playerCardAutoOpened: false
-        property bool playerCardHovered: false
+        property bool playerCardPressed: false
+        property bool playerCardOpenedByHover: false
+        property bool controlCenterOpenedByHover: false
+        readonly property int hoverCloseDelay: 400
+        readonly property int controlCenterCloseDelay: 400
+        readonly property int statusHoverOpenDelay: 120
         readonly property real circleSize: 34
+        readonly property real restWidth: 124
+        readonly property real restHeight: 34
         readonly property real circleGap: 14
         readonly property real playerCardWidth: 410
         readonly property real playerCardHeight: 184
@@ -493,6 +500,8 @@ PanelWindow {
                 closePlayerCard();
         }
         onIslandStateChanged: {
+            if (islandState !== "control_center")
+                controlCenterOpenedByHover = false;
             if (playerCardOpen && !playerCardAllowed)
                 closePlayerCard();
             if (islandState !== "lock_unlock" && (lockUnlockResetting || skipWidthAnimation)) {
@@ -853,7 +862,7 @@ PanelWindow {
                 return customCapsuleWidth;
             if (progressValue >= 0.5)
                 return lyricsCapsuleWidth;
-            return 140;
+            return restWidth;
         }
 
         function customSideSwipeDragDistance() {
@@ -927,18 +936,18 @@ PanelWindow {
                 if (finalProgress >= -0.44) {
                     settleAction = "time";
                     settleProgress = 0;
-                    settleWidth = 140;
+                    settleWidth = restWidth;
                 }
             } else if (startProgress >= 0.5) {
                 if (finalProgress <= 0.44) {
                     settleAction = "time";
                     settleProgress = 0;
-                    settleWidth = 140;
+                    settleWidth = restWidth;
                 }
             } else {
                 settleAction = "time";
                 settleProgress = 0;
-                settleWidth = 140;
+                settleWidth = restWidth;
             }
 
             return {
@@ -1119,6 +1128,7 @@ PanelWindow {
 
         function closePlayerCard() {
             playerCardOpen = false;
+            playerCardOpenedByHover = false;
             playerCardAutoOpened = false;
             playerCardCloseTimer.stop();
         }
@@ -1130,25 +1140,69 @@ PanelWindow {
                 openPlayerCard(false);
         }
 
-        function playerCardHoverChanged(isHovered) {
-            playerCardHovered = isHovered;
-            if (!playerCardOpen)
-                return;
-            if (isHovered) {
+        // ---- hover groups (independent of each other) ----
+        //  pill            -> calendar only
+        //  album circle / player card -> player card only
+        //  status circle   -> control center (closes 1 s after leaving)
+        // Decisions read the live hover state of the items, never a cached copy.
+        function pillLive() {
+            return capsuleMouseArea.containsMouse || capsuleHoverHandler.hovered;
+        }
+
+        function cardLive() {
+            return albumCircle.hovered || playerCardHoverHandler.hovered || playerCardPressed || playerProgressDragging;
+        }
+
+        function controlCenterLive() {
+            return pillLive() || statusCircle.hovered || wifiShellHoverHandler.hovered || bluetoothShellHoverHandler.hovered;
+        }
+
+        // Call whenever any hover source or press state changes.
+        function hoverChanged() {
+            // 1) calendar: only the pill opens it
+            if (pillLive()) {
+                calendarCloseTimer.stop();
+                hoverCloseTimer.stop();
+                if (islandState === "normal" || islandState === "custom")
+                    showCalendarCapsule();
+            } else if (islandState === "calendar") {
+                calendarCloseTimer.restart();
+            }
+
+            // 2) player card: only the album circle / the card itself
+            if (cardLive()) {
+                cardCloseTimer.stop();
                 playerCardCloseTimer.stop();
+                if (albumCircle.hovered && !playerCardOpen && activePlayer && playerCardAllowed && smallPillState) {
+                    playerCardOpen = true;
+                    playerCardAutoOpened = false;
+                    playerCardOpenedByHover = true;
+                }
+            } else if (playerCardOpen) {
+                cardCloseTimer.restart();
+            }
+
+            // 3) control center: status circle opens it, leaving closes it
+            if (statusCircle.hovered) {
+                if (islandState !== "control_center" && !statusHoverOpenTimer.running)
+                    statusHoverOpenTimer.start();
             } else {
-                playerCardCloseTimer.interval = 700;
-                playerCardCloseTimer.restart();
+                statusHoverOpenTimer.stop();
+            }
+            if (islandState === "control_center" && controlCenterOpenedByHover) {
+                if (controlCenterLive())
+                    controlCenterCloseTimer.stop();
+                else
+                    controlCenterCloseTimer.restart();
             }
         }
 
-        function circleHoverChanged(isHovered) {
-            if (isHovered) {
-                hoverCloseTimer.stop();
+        function openControlCenterByHover() {
+            if (!statusCircle.hovered || islandState === "control_center" || !smallPillState)
                 return;
-            }
-            if (islandState === "calendar")
-                hoverCloseTimer.restart();
+            controlCenterOpenedByHover = true;
+            closePlayerCard();
+            showControlCenter();
         }
 
         function showNookTab(tab) {
@@ -1325,12 +1379,58 @@ PanelWindow {
         }
 
         Timer {
+            id: statusHoverOpenTimer
+            interval: islandContainer.statusHoverOpenDelay
+            onTriggered: islandContainer.openControlCenterByHover()
+        }
+        Timer {
+            id: calendarCloseTimer
+            interval: islandContainer.hoverCloseDelay
+            onTriggered: {
+                if (islandContainer.islandState === "calendar" && !islandContainer.pillLive())
+                    islandContainer.smartRestoreState();
+            }
+        }
+        Timer {
+            id: cardCloseTimer
+            interval: islandContainer.hoverCloseDelay
+            onTriggered: {
+                if (!islandContainer.cardLive())
+                    islandContainer.closePlayerCard();
+            }
+        }
+        Timer {
+            id: controlCenterCloseTimer
+            interval: islandContainer.controlCenterCloseDelay
+            onTriggered: {
+                if (islandContainer.islandState === "control_center" && islandContainer.controlCenterOpenedByHover && !islandContainer.controlCenterLive()) {
+                    islandContainer.controlCenterOpenedByHover = false;
+                    islandContainer.smartRestoreState();
+                }
+            }
+        }
+        // Safety net: if a "pointer left" event is ever missed, start the matching close timer.
+        Timer {
+            id: hoverWatchdog
+            interval: 400
+            repeat: true
+            running: islandContainer.playerCardOpen || islandContainer.islandState === "calendar" || islandContainer.controlCenterOpenedByHover
+            onTriggered: {
+                if (islandContainer.islandState === "calendar" && !islandContainer.pillLive() && !calendarCloseTimer.running)
+                    calendarCloseTimer.start();
+                if (islandContainer.playerCardOpen && !islandContainer.cardLive() && !cardCloseTimer.running && !playerCardCloseTimer.running)
+                    cardCloseTimer.start();
+                if (islandContainer.islandState === "control_center" && islandContainer.controlCenterOpenedByHover && !islandContainer.controlCenterLive() && !controlCenterCloseTimer.running)
+                    controlCenterCloseTimer.start();
+            }
+        }
+        Timer {
             id: playerCardCloseTimer
             interval: 700
             onTriggered: {
-                if (islandContainer.playerCardHovered || islandContainer.playerProgressDragging) {
-                    if (islandContainer.playerProgressDragging)
-                        restart();
+                // never close while the pointer is on the card side or a press is in progress
+                if (islandContainer.cardLive()) {
+                    restart();
                     return;
                 }
                 islandContainer.closePlayerCard();
@@ -1404,7 +1504,7 @@ PanelWindow {
             width: islandContainer.circleSize
             height: islandContainer.circleSize
             x: mainCapsule.x + mainCapsule.width + islandContainer.circleGap
-            y: 4 + (38 - height) / 2
+            y: 4 + (islandContainer.restHeight - height) / 2
             iconFontFamily: root.iconFontFamily
             batteryCapacity: islandContainer.batteryCapacity
             isCharging: islandContainer.isCharging
@@ -1418,8 +1518,16 @@ PanelWindow {
                     easing.type: Easing.OutQuad
                 }
             }
-            onClicked: islandContainer.handleConfiguredClickAction("toggleControlCenter")
-            onHoveredChanged: islandContainer.circleHoverChanged(hovered)
+            onClicked: {
+                // a click on a hover-opened control center pins it open instead of closing it
+                if (islandContainer.islandState === "control_center" && islandContainer.controlCenterOpenedByHover) {
+                    islandContainer.controlCenterOpenedByHover = false;
+                    return;
+                }
+                statusHoverOpenTimer.stop();
+                islandContainer.handleConfiguredClickAction("toggleControlCenter");
+            }
+            onHoveredChanged: islandContainer.hoverChanged()
             Component.onCompleted: WifiController.refreshState()
         }
 
@@ -1429,7 +1537,7 @@ PanelWindow {
             width: islandContainer.circleSize
             height: islandContainer.circleSize
             x: mainCapsule.x - islandContainer.circleGap - width
-            y: 4 + (38 - height) / 2
+            y: 4 + (islandContainer.restHeight - height) / 2
             iconFontFamily: root.iconFontFamily
             artSource: islandContainer.circleArtSource
             opacity: islandContainer.albumCircleVisible ? 1 : 0
@@ -1442,7 +1550,7 @@ PanelWindow {
                 }
             }
             onClicked: islandContainer.openPlayerCard(false)
-            onHoveredChanged: islandContainer.circleHoverChanged(hovered)
+            onHoveredChanged: islandContainer.hoverChanged()
         }
 
         Rectangle {
@@ -1459,18 +1567,41 @@ PanelWindow {
             visible: opacity > 0.01
             Behavior on opacity {
                 NumberAnimation {
-                    duration: 220
+                    duration: islandContainer.playerCardVisible ? 110 : 180
                     easing.type: Easing.OutQuad
                 }
             }
 
             HoverHandler {
-                onHoveredChanged: islandContainer.playerCardHoverChanged(hovered)
+                id: playerCardHoverHandler
+                onHoveredChanged: islandContainer.hoverChanged()
+            }
+
+            // A press inside the card counts as "still using it", even if Qt briefly reports
+            // the hover as lost while a button/slider holds the pointer grab.
+            TapHandler {
+                acceptedButtons: Qt.AllButtons
+                gesturePolicy: TapHandler.ReleaseWithinBounds
+                onPressedChanged: {
+                    islandContainer.playerCardPressed = pressed;
+                    islandContainer.hoverChanged();
+                }
+                onCanceled: {
+                    islandContainer.playerCardPressed = false;
+                    islandContainer.hoverChanged();
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                z: -1
+                acceptedButtons: Qt.AllButtons
+                hoverEnabled: true
             }
 
             Loader {
                 anchors.fill: parent
-                active: islandContainer.playerCardVisible || playerCard.visible
+                active: !!islandContainer.activePlayer
                 asynchronous: false
                 sourceComponent: Component {
                     PlayerCardLayer {
@@ -1484,7 +1615,10 @@ PanelWindow {
                         trackProgress: islandContainer.trackProgress
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
-                        onProgressDraggingChanged: islandContainer.playerProgressDragging = progressDragging
+                        onProgressDraggingChanged: {
+                            islandContainer.playerProgressDragging = progressDragging;
+                            islandContainer.hoverChanged();
+                        }
                     }
                 }
             }
@@ -1497,6 +1631,14 @@ PanelWindow {
             property real outlineWidth: root.overviewContentVisible ? 1 : 0
             property color outlineColor: root.overviewContentVisible ? root.overviewCapsuleBorderColor : StyleTokens.clearBlack
             property real displayedWidth: baseTargetWidth
+
+            // Non-blocking hover tracking for the whole pill. Child layers (control center
+            // controls, clock) have their own MouseAreas that can hide hover from
+            // capsuleMouseArea, so this handler is the reliable "pointer is on the pill" signal.
+            HoverHandler {
+                id: capsuleHoverHandler
+                onHoveredChanged: islandContainer.hoverChanged()
+            }
 
             readonly property real baseTargetWidth: {
                 if (root.overviewVisible)
@@ -1548,7 +1690,7 @@ PanelWindow {
                         return 272;
                     return Math.max(notificationLoader.item.minimumWidth, Math.min(notificationLoader.item.maximumWidth, notificationLoader.item.preferredWidth));
                 default:
-                    return 140;
+                    return islandContainer.restWidth;
                 }
             }
 
@@ -1584,7 +1726,7 @@ PanelWindow {
                 case "notification":
                     return notificationLoader.item ? Math.max(56, Math.min(68, notificationLoader.item.preferredHeight)) : 56;
                 default:
-                    return 38;
+                    return islandContainer.restHeight;
                 }
             }
 
@@ -1620,16 +1762,16 @@ PanelWindow {
                 case "notification":
                     return mainCapsule.targetHeight / 2;
                 default:
-                    return 19;
+                    return islandContainer.restHeight / 2;
                 }
             }
 
             function sideSwipeWidthForProgress(progressValue) {
                 if (progressValue < 0)
-                    return 140 + (islandContainer.customCapsuleWidth - 140) * islandContainer.clamp01(-progressValue);
+                    return islandContainer.restWidth + (islandContainer.customCapsuleWidth - islandContainer.restWidth) * islandContainer.clamp01(-progressValue);
                 if (progressValue > 0)
-                    return 140 + (islandContainer.lyricsCapsuleWidth - 140) * islandContainer.clamp01(progressValue);
-                return 140;
+                    return islandContainer.restWidth + (islandContainer.lyricsCapsuleWidth - islandContainer.restWidth) * islandContainer.clamp01(progressValue);
+                return islandContainer.restWidth;
             }
 
             readonly property real sideSwipePreviewWidth: mainCapsule.sideSwipeWidthForProgress(islandContainer.swipeTransitionProgress)
@@ -1712,13 +1854,15 @@ PanelWindow {
                 preventStealing: true
                 hoverEnabled: true
 
+                onContainsMouseChanged: islandContainer.hoverChanged()
                 onEntered: {
                     hoverCloseTimer.stop();
                     if (islandContainer.islandState === "normal" || islandContainer.islandState === "custom")
                         islandContainer.showCalendarCapsule();
                 }
                 onExited: {
-                    if (islandContainer.islandState === "calendar" || (islandContainer.islandState === "expanded" && islandContainer.expandedByPlayerAutoOpen === false && !islandContainer.playerProgressDragging))
+                    // the calendar is closed by calendarCloseTimer (delayed)
+                    if (islandContainer.islandState === "expanded" && islandContainer.expandedByPlayerAutoOpen === false && !islandContainer.playerProgressDragging)
                         hoverCloseTimer.restart();
                 }
 
@@ -2397,6 +2541,10 @@ PanelWindow {
 
         ConnectivityDetailShell {
             id: wifiConnectivityDetailShell
+            HoverHandler {
+                id: wifiShellHoverHandler
+                onHoveredChanged: islandContainer.hoverChanged()
+            }
             open: root.wifiConnectivityDetailOpen
             mounted: root.wifiConnectivityDetailMounted
             rightSide: false
@@ -2414,6 +2562,10 @@ PanelWindow {
 
         ConnectivityDetailShell {
             id: bluetoothConnectivityDetailShell
+            HoverHandler {
+                id: bluetoothShellHoverHandler
+                onHoveredChanged: islandContainer.hoverChanged()
+            }
             open: root.bluetoothConnectivityDetailOpen
             mounted: root.bluetoothConnectivityDetailMounted
             rightSide: true

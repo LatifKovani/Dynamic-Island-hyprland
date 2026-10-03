@@ -51,16 +51,38 @@ Item {
             const r = (Math.min(width, height) - lw) / 2 - 1;
             const cx = width / 2;
             const cy = height / 2;
-            ctx.lineWidth = lw;
-            ctx.lineCap = "round";
-            ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.18);
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.stroke();
+            const top = -Math.PI / 2;
+            const full = Math.PI * 2;
+
+            // The filled arc is centred on the top and widens symmetrically; the empty part is
+            // therefore centred on the bottom and grows up the left and right sides as the
+            // battery drains (like the iPhone concept).
+            const half = Math.max(0, Math.min(1, progress)) * Math.PI;
+            const fillStart = top - half;
+            const fillEnd = top + half;
+
+            // empty part: a dotted track from the end of the arc round the bottom to its start
+            if (progress < 0.999) {
+                const emptySpan = full - 2 * half;
+                const dots = Math.max(0, Math.round(emptySpan * r / 3.2));
+                ctx.fillStyle = Qt.rgba(1, 1, 1, 0.45);
+                for (let i = 0; i <= dots; i++) {
+                    const a = fillEnd + (dots === 0 ? 0 : emptySpan * i / dots);
+                    ctx.beginPath();
+                    ctx.arc(cx + r * Math.cos(a), cy + r * Math.sin(a), 0.9, 0, full);
+                    ctx.fill();
+                }
+            }
+
             if (progress > 0.001) {
+                ctx.lineWidth = lw;
+                ctx.lineCap = "round";
                 ctx.strokeStyle = arcColor;
                 ctx.beginPath();
-                ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+                if (progress >= 0.999)
+                    ctx.arc(cx, cy, r, 0, full);
+                else
+                    ctx.arc(cx, cy, r, fillStart, fillEnd);
                 ctx.stroke();
             }
         }
