@@ -17,12 +17,13 @@ Item {
     property string heroFontFamily: activeConfig.heroFontFamily
 
     readonly property string titleText: summary !== "" ? summary : "New notification"
-    readonly property string bodyText: (body !== "" && body !== summary) ? body : ""
+    property bool showBody: true
+    readonly property string bodyText: (showBody && body !== "" && body !== summary) ? body : ""
     readonly property bool hasTwoLines: bodyText !== ""
     readonly property bool useImageIcon: imagePath !== ""
 
     readonly property real minimumWidth: 280
-    readonly property real maximumWidth: 700
+    property real maximumWidth: 700
     readonly property real iconSlotWidth: 28
     readonly property real contentSpacing: 10
     readonly property real horizontalPadding: 14

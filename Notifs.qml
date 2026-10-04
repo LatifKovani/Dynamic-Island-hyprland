@@ -6,7 +6,7 @@ import Quickshell.Services.Notifications
 Singleton {
     id: root
 
-    property bool dndEnabled: false
+    property bool dndEnabled: UiSettings.notifDnd
 
     readonly property var list: notifList
     readonly property var active: notifList.filter(n => !n.closed)

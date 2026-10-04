@@ -39,6 +39,26 @@ Singleton {
     property alias restRoundness: store.restRoundness
     property alias panelRadius: store.panelRadius
 
+    // ---- Launcher ----
+    property alias launcherWidth: store.launcherWidth
+    property alias launcherShowFavourites: store.launcherShowFavourites
+    property alias launcherBrowseLimit: store.launcherBrowseLimit
+    property alias launcherSearchLimit: store.launcherSearchLimit
+    property alias launcherFavourites: store.launcherFavourites
+    property alias launcherHidden: store.launcherHidden
+
+    // ---- Control center ----
+    property alias ccOrder: store.ccOrder
+    property alias ccHidden: store.ccHidden
+    property alias ccShowHeader: store.ccShowHeader
+
+    // ---- Notifications ----
+    property alias notifPopups: store.notifPopups
+    property alias notifDuration: store.notifDuration
+    property alias notifShowBody: store.notifShowBody
+    property alias notifMaxWidth: store.notifMaxWidth
+    property alias notifDnd: store.notifDnd
+
     // ---- Motion ----
     property alias reduceMotion: store.reduceMotion
     property alias morphDuration: store.morphDuration
@@ -71,6 +91,29 @@ Singleton {
         store.pillOpacity = 100;
         store.restRoundness = 100;
         store.panelRadius = 34;
+    }
+
+    function resetLauncher() {
+        store.launcherWidth = 580;
+        store.launcherShowFavourites = true;
+        store.launcherBrowseLimit = 10;
+        store.launcherSearchLimit = 14;
+        store.launcherFavourites = ["Brave", "kitty", "Spotify", "Neovim", "Visual Studio Code"];
+        store.launcherHidden = ["Avahi Zeroconf Browser", "Avahi SSH Server Browser", "Avahi VNC Server Browser", "Bluetooth Adapters", "A Photo Tool (Libre)"];
+    }
+
+    function resetControlCenter() {
+        store.ccOrder = ["connectivity", "drawer", "display", "sound"];
+        store.ccHidden = [];
+        store.ccShowHeader = true;
+    }
+
+    function resetNotifications() {
+        store.notifPopups = true;
+        store.notifDuration = 1250;
+        store.notifShowBody = true;
+        store.notifMaxWidth = 700;
+        store.notifDnd = false;
     }
 
     function resetMotion() {
@@ -117,6 +160,23 @@ Singleton {
             property int pillOpacity: 100
             property int restRoundness: 100
             property real panelRadius: 34
+
+            property real launcherWidth: 580
+            property bool launcherShowFavourites: true
+            property int launcherBrowseLimit: 10
+            property int launcherSearchLimit: 14
+            property var launcherFavourites: ["Brave", "kitty", "Spotify", "Neovim", "Visual Studio Code"]
+            property var launcherHidden: ["Avahi Zeroconf Browser", "Avahi SSH Server Browser", "Avahi VNC Server Browser", "Bluetooth Adapters", "A Photo Tool (Libre)"]
+
+            property var ccOrder: ["connectivity", "drawer", "display", "sound"]
+            property var ccHidden: []
+            property bool ccShowHeader: true
+
+            property bool notifPopups: true
+            property int notifDuration: 1250
+            property bool notifShowBody: true
+            property real notifMaxWidth: 700
+            property bool notifDnd: false
 
             property bool reduceMotion: false
             property int morphDuration: 400

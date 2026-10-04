@@ -133,8 +133,8 @@ PanelWindow {
     readonly property bool anyConnectivityDetailMounted: wifiConnectivityDetailMounted || bluetoothConnectivityDetailMounted
     readonly property real connectivityDetailWidth: 318
     readonly property real connectivityDetailHeight: 404
-    readonly property real controlCenterMaximumExtraHeight: controlCenterLoader.item ? controlCenterLoader.item.controlCenterMaximumExtraHeight : 120
-    readonly property real controlCenterWindowHeight: islandContainer.controlCenterLayerVisible ? 4 + 320 + root.controlCenterMaximumExtraHeight + 12 : 0
+    readonly property real controlCenterMaximumHeight: controlCenterLoader.item ? controlCenterLoader.item.layoutMaxHeight : 440
+    readonly property real controlCenterWindowHeight: islandContainer.controlCenterLayerVisible ? 4 + root.controlCenterMaximumHeight + 12 : 0
     readonly property real connectivityDetailGap: 16
     readonly property int connectivityDetailAnimationDuration: 360
     readonly property string overviewWallpaperSource: overviewWallpaperCache.effectiveSource
@@ -1000,7 +1000,7 @@ PanelWindow {
                 notificationImagePath = "";
             }
             const resolvedSummary = cleanedSummary !== "" ? cleanedSummary : (cleanedBody !== "" ? cleanedBody : "New notification");
-            if (controlCenterLoader.item)
+            if (controlCenterLoader.item && controlCenterLoader.item.appendNotification)
                 controlCenterLoader.item.appendNotification(cleanedAppName !== "" ? cleanedAppName : "Notification", resolvedSummary, cleanedSummary !== "" ? cleanedBody : "");
             abortSideTransientMode();
             clearTransientCapsule();
@@ -1009,7 +1009,7 @@ PanelWindow {
             notificationBody = cleanedSummary !== "" ? cleanedBody : "";
             islandState = "notification";
             const isPomodoro = cleanedAppName.toLowerCase().includes("pomodoro");
-            restartAutoHideTimer(isPomodoro ? notificationAutoHideInterval : defaultAutoHideInterval);
+            restartAutoHideTimer(isPomodoro ? notificationAutoHideInterval : UiSettings.notifDuration);
         }
 
         function suppressCapsuleClick() {
@@ -1618,7 +1618,7 @@ PanelWindow {
                 case "power_menu":
                     return 420;
                 case "app_launcher":
-                    return 580;
+                    return UiSettings.launcherWidth;
                 case "wallpaper_picker":
                     return 1100;
                 case "clipboard_history":
@@ -1648,7 +1648,7 @@ PanelWindow {
 
                 switch (islandContainer.islandState) {
                 case "control_center":
-                    return 320 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
+                    return controlCenterLoader.item ? controlCenterLoader.item.layoutHeight : 352;
                 case "power_menu":
                     return 130;
                 case "app_launcher":
@@ -2204,6 +2204,8 @@ PanelWindow {
                         body: islandContainer.notificationBody
                         iconText: root.notificationStatusIcon
                         imagePath: islandContainer.notificationImagePath
+                        showBody: UiSettings.notifShowBody
+                        maximumWidth: UiSettings.notifMaxWidth
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         heroFontFamily: root.heroFontFamily
@@ -2238,6 +2240,10 @@ PanelWindow {
                 visible: islandContainer.appLauncherLayerVisible
                 sourceComponent: Component {
                     AppLauncherLayer {
+                        favouriteApps: UiSettings.launcherShowFavourites ? UiSettings.launcherFavourites : []
+                        hiddenApps: UiSettings.launcherHidden
+                        browseLimit: UiSettings.launcherBrowseLimit
+                        searchLimit: UiSettings.launcherSearchLimit
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         showCondition: islandContainer.appLauncherLayerVisible
@@ -2337,11 +2343,19 @@ PanelWindow {
                 asynchronous: false
                 visible: active
                 onLoaded: {
-                    if (item)
+                    if (item) {
                         item.requestNotification.connect(islandContainer.showNotificationCapsule);
+                        item.focusToggleRequested.connect(function (enabled) {
+                            UiSettings.notifDnd = enabled;
+                        });
+                    }
                 }
                 sourceComponent: Component {
                     ControlCenterLayer {
+                        focusEnabled: Notifs.dndEnabled
+                        layoutOrder: UiSettings.ccOrder
+                        layoutHidden: UiSettings.ccHidden
+                        layoutShowHeader: UiSettings.ccShowHeader
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         heroFontFamily: root.heroFontFamily

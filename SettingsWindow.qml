@@ -41,19 +41,19 @@ PanelWindow {
             id: "launcher",
             label: "Launcher",
             icon: "\uf002",
-            ready: false
+            ready: true
         },
         {
             id: "notifications",
             label: "Notifications",
             icon: "\uf0f3",
-            ready: false
+            ready: true
         },
         {
             id: "controlcenter",
             label: "Control Center",
             icon: "\uf1de",
-            ready: false
+            ready: true
         },
         {
             id: "lockscreen",
@@ -94,7 +94,25 @@ PanelWindow {
         ["Reduce motion", "motion"],
         ["Pill morph duration", "motion"],
         ["Player card fade", "motion"],
-        ["Circle fade", "motion"]
+        ["Circle fade", "motion"],
+        ["Launcher panel width", "launcher"],
+        ["Favourites section", "launcher"],
+        ["Favourite apps", "launcher"],
+        ["Hidden apps", "launcher"],
+        ["Apps listed when browsing", "launcher"],
+        ["Search results limit", "launcher"],
+        ["Show notification pop-ups", "notifications"],
+        ["Pop-up duration", "notifications"],
+        ["Show message text", "notifications"],
+        ["Notification maximum width", "notifications"],
+        ["Do not disturb", "notifications"],
+        ["Control center layout", "controlcenter"],
+        ["Section order", "controlcenter"],
+        ["Wi-Fi and Bluetooth cards", "controlcenter"],
+        ["Battery, Night Light and Focus drawer", "controlcenter"],
+        ["Display slider", "controlcenter"],
+        ["Sound slider", "controlcenter"],
+        ["Show clock and battery header", "controlcenter"]
     ]
 
     readonly property var results: {
@@ -114,6 +132,12 @@ PanelWindow {
             return appearancePage;
         case "motion":
             return motionPage;
+        case "launcher":
+            return launcherPage;
+        case "notifications":
+            return notificationsPage;
+        case "controlcenter":
+            return controlCenterPage;
         default:
             return soonPage;
         }
@@ -396,6 +420,18 @@ PanelWindow {
     Component {
         id: motionPage
         SettingsPageMotion {}
+    }
+    Component {
+        id: launcherPage
+        SettingsPageLauncher {}
+    }
+    Component {
+        id: notificationsPage
+        SettingsPageNotifications {}
+    }
+    Component {
+        id: controlCenterPage
+        SettingsPageControlCenter {}
     }
     Component {
         id: soonPage

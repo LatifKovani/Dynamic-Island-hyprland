@@ -72,6 +72,9 @@ Item {
     property int nightLightTemperature: 4500
     property bool focusEnabled: false
     property bool focusBusy: false
+    property var layoutOrder: ["connectivity", "drawer", "display", "sound"]
+    property var layoutHidden: []
+    property bool layoutShowHeader: true
     property string wifiLocalInfoMessage: ""
     property string wifiLocalError: ""
     property string wifiPendingPasswordSsid: ""
@@ -86,6 +89,7 @@ Item {
     readonly property var wifiNetworks: wifiController ? wifiController.networks : null
 
     signal requestNotification(string appName, string summary, string body)
+    signal focusToggleRequested(bool enabled)
 
     readonly property real sliderKnobSize: 24
     readonly property color panelColor: StyleTokens.panel
@@ -353,16 +357,74 @@ Item {
         }
     }
 
+    // Focus = do-not-disturb on the shell's own notification server (Notifs).
+    // focusEnabled is bound from outside; the owner applies the change.
     function toggleFocus() {
-        if (focusBusy)
-            return;
-        focusBusy = true;
-        if (focusEnabled) {
-            focusDisableProcess.running = true;
-        } else {
-            focusEnableProcess.running = true;
-        }
+        focusToggleRequested(!focusEnabled);
     }
+
+    // ---- layout (driven by the Control Center page in settings) ----
+    readonly property var knownSections: ["connectivity", "drawer", "display", "sound"]
+    readonly property real sectionGap: 12
+    readonly property real headerHeight: 28
+    readonly property real layoutPadding: 24
+
+    // Visible sections in display order. Unknown ids are ignored; sections missing
+    // from the saved order are appended, so a hand-edited file can't lose one.
+    readonly property var layoutSections: {
+        const out = [];
+        const order = layoutOrder ? layoutOrder.slice() : [];
+        for (let i = 0; i < knownSections.length; i++)
+            if (order.indexOf(knownSections[i]) === -1)
+                order.push(knownSections[i]);
+        for (let j = 0; j < order.length; j++) {
+            const id = order[j];
+            if (knownSections.indexOf(id) === -1 || out.indexOf(id) !== -1)
+                continue;
+            if (layoutHidden && layoutHidden.indexOf(id) !== -1)
+                continue;
+            out.push(id);
+        }
+        return out;
+    }
+    // never leave the panel completely empty
+    readonly property bool headerShown: layoutShowHeader || layoutSections.length === 0
+
+    function sectionShown(id) {
+        return layoutSections.indexOf(id) !== -1;
+    }
+    function sectionHeight(id, drawerProgress) {
+        switch (id) {
+        case "connectivity":
+            return 80;
+        case "drawer":
+            return batteryDrawerHandleHeight + drawerProgress * (batteryDrawerContentGap + batteryDrawerContentHeight);
+        case "display":
+        case "sound":
+            return 76;
+        }
+        return 0;
+    }
+    function sectionY(id) {
+        let y = headerShown ? headerHeight + sectionGap : 0;
+        for (let i = 0; i < layoutSections.length; i++) {
+            if (layoutSections[i] === id)
+                return y;
+            y += sectionHeight(layoutSections[i], batteryDrawerProgress) + sectionGap;
+        }
+        return y;
+    }
+    function contentHeightAt(drawerProgress) {
+        let h = headerShown ? headerHeight : 0;
+        for (let i = 0; i < layoutSections.length; i++) {
+            if (h > 0)
+                h += sectionGap;
+            h += sectionHeight(layoutSections[i], drawerProgress);
+        }
+        return h;
+    }
+    readonly property real layoutHeight: layoutPadding + contentHeightAt(batteryDrawerProgress)
+    readonly property real layoutMaxHeight: layoutPadding + contentHeightAt(1)
 
     function clearWifiPrompt() {
         wifiPendingPasswordSsid = "";
@@ -791,7 +853,6 @@ Item {
         SystemServices.requestBrightness();
         SystemServices.requestVolume();
         refreshBatteryModeState();
-        focusStateProcess.running = true;
     }
 
     Behavior on opacity {
@@ -823,17 +884,6 @@ Item {
         }
     }
     Process {
-        id: focusStateProcess
-        command: ["swaync-client", "--get-dnd"]
-        running: false
-        stdout: SplitParser {
-            onRead: function (line) {
-                const val = line.trim().toLowerCase();
-                controlCenter.focusEnabled = (val === "true");
-            }
-        }
-    }
-    Process {
         id: nightLightEnableProcess
         command: ["hyprctl", "hyprsunset", "temperature", controlCenter.nightLightTemperature.toString()]
         running: false
@@ -858,32 +908,6 @@ Item {
             controlCenter.requestNotification("Night Light", "Night Light disabled", "");
         }
     }
-    Process {
-        id: focusEnableProcess
-        command: ["swaync-client", "-dn"]
-        running: false
-        onExited: function (exitCode) {
-            controlCenter.focusBusy = false;
-            if (exitCode === 0) {
-                controlCenter.focusEnabled = true;
-                controlCenter.requestNotification("Focus", "Focus enabled", "Notifications paused");
-            } else {
-                controlCenter.focusEnabled = false;
-            }
-        }
-    }
-
-    Process {
-        id: focusDisableProcess
-        command: ["swaync-client", "-df"]
-        running: false
-        onExited: function (exitCode) {
-            controlCenter.focusBusy = false;
-            controlCenter.focusEnabled = false;
-            controlCenter.requestNotification("Focus", "Focus disabled", "");
-        }
-    }
-
     Connections {
         target: SystemServices
         function onTlpStateReady(available, profile, output, errorString) {
@@ -1012,10 +1036,9 @@ Item {
     Item {
         anchors.fill: parent
 
-        Column {
+        Item {
             id: mainView
             anchors.fill: parent
-            spacing: 12
             visible: !controlCenter.anyConnectivityPanelOpen
             opacity: controlCenter.anyConnectivityPanelOpen ? 0 : 1
             Behavior on opacity {
@@ -1026,6 +1049,8 @@ Item {
             }
 
             Item {
+                visible: controlCenter.headerShown
+                y: 0
                 width: parent.width
                 height: 28
 
@@ -1167,6 +1192,8 @@ Item {
             }
 
             Item {
+                visible: controlCenter.sectionShown("connectivity")
+                y: controlCenter.sectionY("connectivity")
                 width: parent.width
                 height: 80
 
@@ -1399,6 +1426,8 @@ Item {
 
             Item {
                 id: batteryDrawer
+                visible: controlCenter.sectionShown("drawer")
+                y: controlCenter.sectionY("drawer")
                 readonly property real cardWidth: parent.width
                 readonly property real halfCardWidth: (parent.width - 12) / 2
                 readonly property real modeSlotWidth: 44
@@ -1855,6 +1884,8 @@ Item {
 
             ControlSliderCard {
                 id: brightnessCard
+                visible: controlCenter.sectionShown("display")
+                y: controlCenter.sectionY("display")
                 width: parent.width
                 height: 76
                 title: "Display"
@@ -1888,6 +1919,8 @@ Item {
 
             ControlSliderCard {
                 id: volumeCard
+                visible: controlCenter.sectionShown("sound")
+                y: controlCenter.sectionY("sound")
                 width: parent.width
                 height: 76
                 title: "Sound"

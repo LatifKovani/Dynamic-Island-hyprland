@@ -13,7 +13,11 @@ Item {
     property bool appsLoaded: false
     property int highlightedIndex: -1
 
-    // Edit these lists to personalise.
+    // Set from UiSettings by DynamicIslandWindow
+    property int browseLimit: 10
+    property int searchLimit: 14
+
+    // Defaults only - overridden by the Launcher page in settings.
     property var favouriteApps: ["Brave", "kitty", "Spotify", "Neovim", "Visual Studio Code"]
     property var hiddenApps: ["Avahi Zeroconf Browser", "Avahi SSH Server Browser", "Avahi VNC Server Browser", "Bluetooth Adapters", "A Photo Tool (Libre)"]
 
@@ -94,7 +98,7 @@ Item {
         }
 
         let count = 0;
-        const limit = q ? 14 : 10;
+        const limit = q ? root.searchLimit : root.browseLimit;
         for (let i = 0; i < allApps.count && count < limit; i++) {
             const a = allApps.get(i);
             if (isHidden(a.appName))

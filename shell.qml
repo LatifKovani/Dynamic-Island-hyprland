@@ -224,7 +224,7 @@ Scope {
     Connections {
         target: Notifs
         function onNotificationAdded(notif) {
-            if (Notifs.dndEnabled)
+            if (Notifs.dndEnabled || !UiSettings.notifPopups)
                 return;
 
             const windows = panelVariants.instances ? panelVariants.instances : [];
