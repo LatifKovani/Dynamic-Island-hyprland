@@ -15,6 +15,7 @@ Item {
     property string timeTotal: "0:00"
     property real trackProgress: 0
     property var cavaLevels: []
+    property int fadeDuration: 110
     property string iconFontFamily: ""
     property string textFontFamily: ""
     property bool progressDragging: seekArea.pressed
@@ -102,7 +103,7 @@ Item {
 
     Behavior on opacity {
         NumberAnimation {
-            duration: 110
+            duration: root.fadeDuration
             easing.type: Easing.InOutQuad
         }
     }

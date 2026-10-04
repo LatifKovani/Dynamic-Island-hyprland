@@ -29,13 +29,13 @@ PanelWindow {
             id: "appearance",
             label: "Appearance",
             icon: "\uf53f",
-            ready: false
+            ready: true
         },
         {
             id: "motion",
             label: "Motion",
             icon: "\uf0e7",
-            ready: false
+            ready: true
         },
         {
             id: "launcher",
@@ -86,7 +86,15 @@ PanelWindow {
         ["Control center open delay", "bar"],
         ["24-hour clock", "clock"],
         ["Time format AM / PM", "clock"],
-        ["Calendar days", "clock"]
+        ["Calendar days", "clock"],
+        ["Pill color", "appearance"],
+        ["Pill opacity / transparency", "appearance"],
+        ["Resting pill roundness", "appearance"],
+        ["Panel corner radius", "appearance"],
+        ["Reduce motion", "motion"],
+        ["Pill morph duration", "motion"],
+        ["Player card fade", "motion"],
+        ["Circle fade", "motion"]
     ]
 
     readonly property var results: {
@@ -94,6 +102,21 @@ PanelWindow {
         if (q === "")
             return [];
         return searchIndex.filter(e => e[0].toLowerCase().indexOf(q) !== -1);
+    }
+
+    function pageComponent(id) {
+        switch (id) {
+        case "bar":
+            return barPage;
+        case "clock":
+            return clockPage;
+        case "appearance":
+            return appearancePage;
+        case "motion":
+            return motionPage;
+        default:
+            return soonPage;
+        }
     }
 
     function pageLabel(id) {
@@ -295,7 +318,7 @@ PanelWindow {
                     anchors.topMargin: 18
                     anchors.bottom: parent.bottom
                     visible: win.query.trim() === ""
-                    sourceComponent: win.currentPage === "bar" ? barPage : (win.currentPage === "clock" ? clockPage : soonPage)
+                    sourceComponent: win.pageComponent(win.currentPage)
                 }
 
                 // search results
@@ -365,6 +388,14 @@ PanelWindow {
     Component {
         id: clockPage
         SettingsPageClock {}
+    }
+    Component {
+        id: appearancePage
+        SettingsPageAppearance {}
+    }
+    Component {
+        id: motionPage
+        SettingsPageMotion {}
     }
     Component {
         id: soonPage

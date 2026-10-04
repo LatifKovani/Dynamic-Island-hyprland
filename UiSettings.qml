@@ -33,6 +33,19 @@ Singleton {
     property alias clock24h: store.clock24h
     property alias calendarDays: store.calendarDays
 
+    // ---- Appearance ----
+    property alias pillColor: store.pillColor
+    property alias pillOpacity: store.pillOpacity
+    property alias restRoundness: store.restRoundness
+    property alias panelRadius: store.panelRadius
+
+    // ---- Motion ----
+    property alias reduceMotion: store.reduceMotion
+    property alias morphDuration: store.morphDuration
+    property alias cardFadeIn: store.cardFadeIn
+    property alias cardFadeOut: store.cardFadeOut
+    property alias circleFade: store.circleFade
+
     function resetBarAndIsland() {
         store.restWidth = 124;
         store.restHeight = 34;
@@ -51,6 +64,21 @@ Singleton {
     function resetClockAndDate() {
         store.clock24h = true;
         store.calendarDays = 5;
+    }
+
+    function resetAppearance() {
+        store.pillColor = "#000000";
+        store.pillOpacity = 100;
+        store.restRoundness = 100;
+        store.panelRadius = 34;
+    }
+
+    function resetMotion() {
+        store.reduceMotion = false;
+        store.morphDuration = 400;
+        store.cardFadeIn = 110;
+        store.cardFadeOut = 180;
+        store.circleFade = 220;
     }
 
     FileView {
@@ -84,6 +112,17 @@ Singleton {
 
             property bool clock24h: true
             property int calendarDays: 5
+
+            property string pillColor: "#000000"
+            property int pillOpacity: 100
+            property int restRoundness: 100
+            property real panelRadius: 34
+
+            property bool reduceMotion: false
+            property int morphDuration: 400
+            property int cardFadeIn: 110
+            property int cardFadeOut: 180
+            property int circleFade: 220
         }
     }
 }

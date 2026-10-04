@@ -422,6 +422,8 @@ PanelWindow {
         readonly property int controlCenterCloseDelay: UiSettings.controlCenterCloseDelay
         readonly property int statusHoverOpenDelay: UiSettings.statusHoverOpenDelay
         readonly property real circleSize: UiSettings.circleSize
+        readonly property color pillBase: UiSettings.pillColor
+        readonly property color pillFill: Qt.rgba(pillBase.r, pillBase.g, pillBase.b, UiSettings.pillOpacity / 100)
         readonly property real restWidth: UiSettings.restWidth
         readonly property real restHeight: UiSettings.restHeight
         readonly property real circleGap: UiSettings.circleGap
@@ -1462,7 +1464,7 @@ PanelWindow {
             enabled: islandContainer.statusCircleVisible
             Behavior on opacity {
                 NumberAnimation {
-                    duration: 220
+                    duration: UiSettings.reduceMotion ? 0 : UiSettings.circleFade
                     easing.type: Easing.OutQuad
                 }
             }
@@ -1493,7 +1495,7 @@ PanelWindow {
             enabled: islandContainer.albumCircleVisible
             Behavior on opacity {
                 NumberAnimation {
-                    duration: 220
+                    duration: UiSettings.reduceMotion ? 0 : UiSettings.circleFade
                     easing.type: Easing.OutQuad
                 }
             }
@@ -1515,7 +1517,7 @@ PanelWindow {
             visible: opacity > 0.01
             Behavior on opacity {
                 NumberAnimation {
-                    duration: islandContainer.playerCardVisible ? 110 : 180
+                    duration: UiSettings.reduceMotion ? 0 : (islandContainer.playerCardVisible ? UiSettings.cardFadeIn : UiSettings.cardFadeOut)
                     easing.type: Easing.OutQuad
                 }
             }
@@ -1556,6 +1558,7 @@ PanelWindow {
                         showCondition: islandContainer.playerCardVisible
                         activePlayer: islandContainer.activePlayer
                         cavaLevels: islandContainer.cavaLevels
+                        fadeDuration: UiSettings.reduceMotion ? 0 : UiSettings.cardFadeIn
                         artSource: islandContainer.circleArtSource
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
@@ -1576,7 +1579,7 @@ PanelWindow {
         Rectangle {
             id: mainCapsule
             z: 5
-            property int morphDuration: 400
+            property int morphDuration: UiSettings.reduceMotion ? 0 : UiSettings.morphDuration
             property real outlineWidth: root.overviewContentVisible ? 1 : 0
             property color outlineColor: root.overviewContentVisible ? root.overviewCapsuleBorderColor : StyleTokens.clearBlack
             property real displayedWidth: baseTargetWidth
@@ -1677,29 +1680,29 @@ PanelWindow {
 
                 switch (islandContainer.islandState) {
                 case "control_center":
-                    return 34;
+                    return UiSettings.panelRadius;
                 case "power_menu":
-                    return 34;
+                    return UiSettings.panelRadius;
                 case "app_launcher":
-                    return 34;
+                    return UiSettings.panelRadius;
                 case "wallpaper_picker":
-                    return 34;
+                    return UiSettings.panelRadius;
                 case "clipboard_history":
-                    return 34;
+                    return UiSettings.panelRadius;
                 case "polkit_auth":
-                    return 34;
+                    return UiSettings.panelRadius;
                 case "calendar":
-                    return 34;
+                    return UiSettings.panelRadius;
                 case "expanded":
-                    return 40;
+                    return UiSettings.panelRadius + 6;
                 case "bluetooth_expanded":
-                    return 40;
+                    return UiSettings.panelRadius + 6;
                 case "lock_unlock":
                     return 19;
                 case "notification":
                     return mainCapsule.targetHeight / 2;
                 default:
-                    return islandContainer.restHeight / 2;
+                    return islandContainer.restHeight / 2 * UiSettings.restRoundness / 100;
                 }
             }
 
@@ -1712,7 +1715,7 @@ PanelWindow {
             }
 
             readonly property real sideSwipePreviewWidth: mainCapsule.sideSwipeWidthForProgress(islandContainer.swipeTransitionProgress)
-            color: root.overviewContentVisible ? root.overviewCapsuleColor : StyleTokens.black
+            color: root.overviewContentVisible ? root.overviewCapsuleColor : islandContainer.pillFill
             y: 4
             anchors.horizontalCenter: parent.horizontalCenter
             clip: true
