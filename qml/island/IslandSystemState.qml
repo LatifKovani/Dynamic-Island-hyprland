@@ -18,6 +18,10 @@ Item {
     property int currentWorkspace: 1
     property bool playerCardActive: false
     property bool monitorFocused: true
+    // Set from UiSettings by DynamicIslandWindow
+    property bool batteryAlerts: true
+    property bool batteryCriticalAlert: true
+    property int batteryCriticalLevel: 10
     property real _ramTotalGb: 0
     property real _ramUsedGb: 0
     property var _notifiedMilestones: ({})
@@ -581,7 +585,7 @@ Item {
 
             const milestones = [25, 20, 15, 10];
             for (const m of milestones) {
-                if (capacity <= m && !root._notifiedMilestones[m]) {
+                if (root.batteryAlerts && capacity <= m && !root._notifiedMilestones[m]) {
                     root._notifiedMilestones = Object.assign({}, root._notifiedMilestones, {
                         [m]: true
                     });
@@ -590,7 +594,7 @@ Item {
                 }
             }
 
-            if (capacity <= 10) {
+            if (root.batteryCriticalAlert && capacity <= root.batteryCriticalLevel) {
                 root._criticalBatteryActive = true;
                 root.criticalBatteryRequested("\uf244", capacity / 100.0, "Battery critically low — " + capacity + "%");
             }

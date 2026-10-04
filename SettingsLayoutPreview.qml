@@ -9,7 +9,7 @@ Item {
     property var hidden: []
     property bool showHeader: true
 
-    readonly property var known: ["connectivity", "drawer", "display", "sound"]
+    readonly property var known: ["connectivity", "drawer", "display", "sound", "notifications"]
     readonly property real previewScale: 0.62
     readonly property real gap: 12
 
@@ -32,7 +32,7 @@ Item {
     readonly property bool headerOn: showHeader || visibleSections.length === 0
 
     function heightOf(id) {
-        return id === "connectivity" ? 80 : (id === "drawer" ? 20 : 76);
+        return id === "connectivity" ? 80 : (id === "drawer" ? 20 : (id === "notifications" ? 200 : 76));
     }
     function labelOf(id) {
         switch (id) {
@@ -44,6 +44,8 @@ Item {
             return "Display";
         case "sound":
             return "Sound";
+        case "notifications":
+            return "Notifications";
         }
         return id;
     }

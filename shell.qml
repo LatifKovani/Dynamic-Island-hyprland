@@ -92,6 +92,8 @@ Scope {
             });
         }
         function showLockUnlock() {
+            if (!UiSettings.lockAnimation)
+                return;
             shellRoot.forEachWindow(window => {
                 if (!window || !window.islandContainerRef)
                     return;

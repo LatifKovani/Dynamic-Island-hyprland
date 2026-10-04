@@ -59,6 +59,19 @@ Singleton {
     property alias notifMaxWidth: store.notifMaxWidth
     property alias notifDnd: store.notifDnd
 
+    // ---- Lock Screen ----
+    property alias lockAnimation: store.lockAnimation
+    property alias lockCapsuleWidth: store.lockCapsuleWidth
+    property alias lockIconSize: store.lockIconSize
+    property alias lockStartDelay: store.lockStartDelay
+    property alias lockHoldDuration: store.lockHoldDuration
+    property alias lockFadeOut: store.lockFadeOut
+
+    // ---- System ----
+    property alias batteryAlerts: store.batteryAlerts
+    property alias batteryCriticalAlert: store.batteryCriticalAlert
+    property alias batteryCriticalLevel: store.batteryCriticalLevel
+
     // ---- Motion ----
     property alias reduceMotion: store.reduceMotion
     property alias morphDuration: store.morphDuration
@@ -103,7 +116,7 @@ Singleton {
     }
 
     function resetControlCenter() {
-        store.ccOrder = ["connectivity", "drawer", "display", "sound"];
+        store.ccOrder = ["connectivity", "drawer", "display", "sound", "notifications"];
         store.ccHidden = [];
         store.ccShowHeader = true;
     }
@@ -114,6 +127,21 @@ Singleton {
         store.notifShowBody = true;
         store.notifMaxWidth = 700;
         store.notifDnd = false;
+    }
+
+    function resetLockScreen() {
+        store.lockAnimation = true;
+        store.lockCapsuleWidth = 170;
+        store.lockIconSize = 16;
+        store.lockStartDelay = 420;
+        store.lockHoldDuration = 600;
+        store.lockFadeOut = 240;
+    }
+
+    function resetSystem() {
+        store.batteryAlerts = true;
+        store.batteryCriticalAlert = true;
+        store.batteryCriticalLevel = 10;
     }
 
     function resetMotion() {
@@ -168,7 +196,7 @@ Singleton {
             property var launcherFavourites: ["Brave", "kitty", "Spotify", "Neovim", "Visual Studio Code"]
             property var launcherHidden: ["Avahi Zeroconf Browser", "Avahi SSH Server Browser", "Avahi VNC Server Browser", "Bluetooth Adapters", "A Photo Tool (Libre)"]
 
-            property var ccOrder: ["connectivity", "drawer", "display", "sound"]
+            property var ccOrder: ["connectivity", "drawer", "display", "sound", "notifications"]
             property var ccHidden: []
             property bool ccShowHeader: true
 
@@ -177,6 +205,17 @@ Singleton {
             property bool notifShowBody: true
             property real notifMaxWidth: 700
             property bool notifDnd: false
+
+            property bool lockAnimation: true
+            property real lockCapsuleWidth: 170
+            property int lockIconSize: 16
+            property int lockStartDelay: 420
+            property int lockHoldDuration: 600
+            property int lockFadeOut: 240
+
+            property bool batteryAlerts: true
+            property bool batteryCriticalAlert: true
+            property int batteryCriticalLevel: 10
 
             property bool reduceMotion: false
             property int morphDuration: 400

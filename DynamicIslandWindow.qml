@@ -556,6 +556,9 @@ PanelWindow {
             currentWorkspace: islandContainer.currentWs
             playerCardActive: islandContainer.playerCardVisible
             monitorFocused: root.monitorFocused
+            batteryAlerts: UiSettings.batteryAlerts
+            batteryCriticalAlert: UiSettings.batteryCriticalAlert
+            batteryCriticalLevel: UiSettings.batteryCriticalLevel
         }
 
         Connections {
@@ -950,6 +953,9 @@ PanelWindow {
         function showTransientCapsule(icon, progress, customText) {
             if (startupSuppressTransients)
                 return;
+            // the control center already shows volume / brightness; their OSD (no text) would replace it
+            if (islandState === "control_center" && customText === "")
+                return;
             const nextProgress = progress >= 0 ? progress : -1.0;
             const animateProgress = islandState === "split" && osdProgress >= 0 && nextProgress >= 0;
             const animateFromSide = currentTransientOriginSide();
@@ -1114,7 +1120,7 @@ PanelWindow {
         }
 
         function controlCenterLive() {
-            return pillLive() || statusCircle.hovered || wifiShellHoverHandler.hovered || bluetoothShellHoverHandler.hovered;
+            return pillLive() || statusCircle.hovered || wifiShellHoverHandler.hovered || bluetoothShellHoverHandler.hovered || !!(controlCenterLoader.item && controlCenterLoader.item.sliderActive);
         }
 
         // Call whenever any hover source or press state changes.
@@ -1265,6 +1271,7 @@ PanelWindow {
             clearTransientCapsule();
             lockUnlockResetting = false;
             skipWidthAnimation = true;
+            lockUnlockCapsuleWidth = UiSettings.lockCapsuleWidth;
             islandState = "lock_unlock";
             mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
             stopAutoHideTimer();
@@ -1278,7 +1285,7 @@ PanelWindow {
                 return;
             lockUnlockResetting = true;
             skipWidthAnimation = true;
-            lockUnlockCapsuleWidth = 170;
+            lockUnlockCapsuleWidth = UiSettings.lockCapsuleWidth;
             lockUnlockResetTimer.restart();
         }
 
@@ -2314,6 +2321,9 @@ PanelWindow {
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         showCondition: islandContainer.lockUnlockLayerVisible
+                        iconSize: UiSettings.lockIconSize
+                        holdDuration: UiSettings.lockHoldDuration
+                        fadeOutDuration: UiSettings.lockFadeOut
                         onAnimationFinished: {
                             islandContainer.resetLockUnlockCapsule();
                         }
@@ -2327,7 +2337,7 @@ PanelWindow {
 
                 Timer {
                     id: unlockStartDelay
-                    interval: 420
+                    interval: UiSettings.lockStartDelay
                     repeat: false
                     onTriggered: {
                         if (lockUnlockLoader.item)
@@ -2348,6 +2358,13 @@ PanelWindow {
                         item.focusToggleRequested.connect(function (enabled) {
                             UiSettings.notifDnd = enabled;
                         });
+                        item.notificationClearRequested.connect(function () {
+                            Notifs.clearAll();
+                        });
+                        item.notificationDismissRequested.connect(function (notif) {
+                            Notifs.remove(notif.id);
+                        });
+                        item.sliderActivityChanged.connect(islandContainer.hoverChanged);
                     }
                 }
                 sourceComponent: Component {
@@ -2356,6 +2373,7 @@ PanelWindow {
                         layoutOrder: UiSettings.ccOrder
                         layoutHidden: UiSettings.ccHidden
                         layoutShowHeader: UiSettings.ccShowHeader
+                        notificationHistory: Notifs.list
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         heroFontFamily: root.heroFontFamily

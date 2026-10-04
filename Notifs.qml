@@ -77,6 +77,13 @@ Singleton {
         notif._raw.tracked = false;
     }
 
+    function remove(notifId) {
+        const entry = root.notifList.find(n => n.id === notifId);
+        root.notifList = root.notifList.filter(n => n.id !== notifId);
+        if (entry && !entry.closed && entry._raw)
+            entry._raw.tracked = false;
+    }
+
     function clearAll() {
         for (const n of root.notifList) {
             if (!n.closed && n._raw)

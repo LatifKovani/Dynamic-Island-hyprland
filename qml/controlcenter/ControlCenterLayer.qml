@@ -72,7 +72,8 @@ Item {
     property int nightLightTemperature: 4500
     property bool focusEnabled: false
     property bool focusBusy: false
-    property var layoutOrder: ["connectivity", "drawer", "display", "sound"]
+    property var layoutOrder: ["connectivity", "drawer", "display", "sound", "notifications"]
+    property var notificationHistory: []
     property var layoutHidden: []
     property bool layoutShowHeader: true
     property string wifiLocalInfoMessage: ""
@@ -90,6 +91,13 @@ Item {
 
     signal requestNotification(string appName, string summary, string body)
     signal focusToggleRequested(bool enabled)
+    signal notificationClearRequested
+    signal notificationDismissRequested(var notif)
+    signal sliderActivityChanged
+
+    // true while a finger / button is held on the brightness or volume slider
+    readonly property bool sliderActive: brightnessCard.pressed || volumeCard.pressed
+    onSliderActiveChanged: sliderActivityChanged()
 
     readonly property real sliderKnobSize: 24
     readonly property color panelColor: StyleTokens.panel
@@ -364,7 +372,7 @@ Item {
     }
 
     // ---- layout (driven by the Control Center page in settings) ----
-    readonly property var knownSections: ["connectivity", "drawer", "display", "sound"]
+    readonly property var knownSections: ["connectivity", "drawer", "display", "sound", "notifications"]
     readonly property real sectionGap: 12
     readonly property real headerHeight: 28
     readonly property real layoutPadding: 24
@@ -402,6 +410,8 @@ Item {
         case "display":
         case "sound":
             return 76;
+        case "notifications":
+            return 200;
         }
         return 0;
     }
@@ -1950,6 +1960,21 @@ Item {
                     controlCenter.flushVolume(true);
                 }
                 onCancelRequested: SystemServices.requestVolume()
+            }
+
+            NotificationHistoryCard {
+                visible: controlCenter.sectionShown("notifications")
+                y: controlCenter.sectionY("notifications")
+                width: parent.width
+                height: 200
+                history: controlCenter.notificationHistory
+                iconFontFamily: controlCenter.iconFontFamily
+                textFontFamily: controlCenter.textFontFamily
+                moduleColor: controlCenter.moduleColor
+                textPrimary: controlCenter.textPrimary
+                textSecondary: controlCenter.textSecondary
+                onClearRequested: controlCenter.notificationClearRequested()
+                onDismissRequested: notif => controlCenter.notificationDismissRequested(notif)
             }
         }
 

@@ -6,6 +6,10 @@ Item {
     property string iconFontFamily: ""
     property string textFontFamily: ""
     property bool showCondition: false
+    // Set from UiSettings by DynamicIslandWindow
+    property int iconSize: 16
+    property int holdDuration: 600
+    property int fadeOutDuration: 240
 
     signal animationFinished
 
@@ -33,7 +37,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: root.unlocked ? "\uf2fc" : "\uF023"
         font.family: root.iconFontFamily
-        font.pixelSize: 16
+        font.pixelSize: root.iconSize
         color: "white"
         opacity: 0
 
@@ -60,14 +64,14 @@ Item {
         }
 
         PauseAnimation {
-            duration: 600
+            duration: root.holdDuration
         }
 
         NumberAnimation {
             target: root
             property: "opacity"
             to: 0
-            duration: 240
+            duration: root.fadeOutDuration
             easing.type: Easing.InQuad
         }
 

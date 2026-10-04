@@ -59,13 +59,13 @@ PanelWindow {
             id: "lockscreen",
             label: "Lock Screen",
             icon: "\uf023",
-            ready: false
+            ready: true
         },
         {
             id: "system",
             label: "System",
             icon: "\uf013",
-            ready: false
+            ready: true
         }
     ]
 
@@ -112,7 +112,17 @@ PanelWindow {
         ["Battery, Night Light and Focus drawer", "controlcenter"],
         ["Display slider", "controlcenter"],
         ["Sound slider", "controlcenter"],
-        ["Show clock and battery header", "controlcenter"]
+        ["Notification history", "controlcenter"],
+        ["Show clock and battery header", "controlcenter"],
+        ["Unlock animation", "lockscreen"],
+        ["Lock capsule width", "lockscreen"],
+        ["Lock icon size", "lockscreen"],
+        ["Unlock start delay", "lockscreen"],
+        ["Unlocked icon hold time", "lockscreen"],
+        ["Lock fade out", "lockscreen"],
+        ["Low battery alerts", "system"],
+        ["Critical battery alert", "system"],
+        ["Critical battery level", "system"]
     ]
 
     readonly property var results: {
@@ -138,6 +148,10 @@ PanelWindow {
             return notificationsPage;
         case "controlcenter":
             return controlCenterPage;
+        case "lockscreen":
+            return lockScreenPage;
+        case "system":
+            return systemPage;
         default:
             return soonPage;
         }
@@ -432,6 +446,14 @@ PanelWindow {
     Component {
         id: controlCenterPage
         SettingsPageControlCenter {}
+    }
+    Component {
+        id: lockScreenPage
+        SettingsPageLockScreen {}
+    }
+    Component {
+        id: systemPage
+        SettingsPageSystem {}
     }
     Component {
         id: soonPage

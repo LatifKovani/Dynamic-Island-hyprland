@@ -49,6 +49,11 @@ SettingsPage {
                     id: "sound",
                     label: "Sound slider",
                     description: "Output volume"
+                },
+                {
+                    id: "notifications",
+                    label: "Notification history",
+                    description: "Recent notifications, with clear and dismiss"
                 }
             ]
             order: UiSettings.ccOrder
