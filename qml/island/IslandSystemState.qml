@@ -16,8 +16,7 @@ Item {
     property string timeText: "00:00"
     property string dateText: "Mon, Jan 01"
     property int currentWorkspace: 1
-    property bool customSwipeActive: false
-    property bool musicActive: false
+    property bool playerCardActive: false
     property bool monitorFocused: true
     property real _ramTotalGb: 0
     property real _ramUsedGb: 0
@@ -28,7 +27,6 @@ Item {
 
     readonly property var configuredLeftSwipeIds: buildNormalizedSwipeItemIds(configuredLeftSwipeItems)
     readonly property bool usesSystemStatsModule: configuredLeftSwipeIds.indexOf("cpu") !== -1 || configuredLeftSwipeIds.indexOf("ram") !== -1
-    readonly property bool usesCavaModule: configuredLeftSwipeIds.indexOf("cava") !== -1
     readonly property bool hasCustomLeftItems: customLeftItems.length > 0
     readonly property string systemServicesClientId: "island-system-state-" + Math.random().toString(36).slice(2)
     readonly property string defaultStatusIcon: "\ud83c\udfa7"
@@ -69,11 +67,8 @@ Item {
     onConfiguredLeftSwipeIdsChanged: {
         syncCustomLeftItems();
         refreshMissingValues();
-        updateCavaSubscription();
     }
-    onUsesCavaModuleChanged: updateCavaSubscription()
-    onCustomSwipeActiveChanged: updateCavaSubscription()
-    onMusicActiveChanged: updateCavaSubscription()
+    onPlayerCardActiveChanged: updateCavaSubscription()
     onBatteryCapacityChanged: syncCustomLeftItems()
     onIsChargingChanged: syncCustomLeftItems()
     onCurrentVolumeChanged: syncCustomLeftItems()
@@ -213,7 +208,7 @@ Item {
     }
 
     function updateCavaSubscription() {
-        const active = musicActive || (usesCavaModule && customSwipeActive);
+        const active = playerCardActive;
         SystemServices.setCavaClientActive(systemServicesClientId, active);
         if (active)
             cavaLevels = SystemServices.cavaLevels;
@@ -425,11 +420,6 @@ Item {
                 icon: statusIcon("ram"),
                 iconKind: "glyph",
                 text: _ramUsedGb.toFixed(1) + "/" + _ramTotalGb.toFixed(0) + "GB"
-            };
-        case "cava":
-            return {
-                id: itemId,
-                kind: "cava"
             };
         default:
             return null;

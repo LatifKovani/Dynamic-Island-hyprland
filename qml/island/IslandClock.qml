@@ -7,6 +7,7 @@ Item {
     width: 0
     height: 0
 
+    property bool use24h: true
     property string currentTime: "00:00"
     property string currentDateLabel: "Mon, Jan 01"
 
@@ -21,6 +22,8 @@ Item {
         return dayNames[now.getDay()] + ", " + monthNames[now.getMonth()] + " " + padTwoDigits(now.getDate());
     }
 
+    onUse24hChanged: clockTimer.restart()
+
     Timer {
         id: clockTimer
 
@@ -31,7 +34,7 @@ Item {
 
         onTriggered: {
             const now = new Date();
-            root.currentTime = Qt.formatTime(now, "HH:mm");
+            root.currentTime = Qt.formatTime(now, root.use24h ? "HH:mm" : "h:mm AP");
             root.currentDateLabel = root.formatDateLabel(now);
             interval = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
         }

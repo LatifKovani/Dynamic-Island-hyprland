@@ -13,7 +13,8 @@ Item {
     property color clockColor: "white"
     property color weekendColor: "#ff6b6b"
 
-    readonly property int windowRadius: 2
+    property int visibleDays: 5
+    readonly property int windowRadius: Math.floor(Math.max(1, visibleDays) / 2)
     readonly property var dayInitials: ["S", "M", "T", "W", "T", "F", "S"]
     readonly property var dayShortNames: ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
     readonly property var edgeFade: [1.0, 0.8, 0.4]

@@ -9,6 +9,7 @@ Scope {
 
     readonly property bool screenRecordingActive: SystemServices.screenRecordingActive
     property bool shuttingDown: false
+    property bool settingsOpen: false
 
     readonly property var userConfig: UserConfig
 
@@ -63,8 +64,21 @@ Scope {
             shellRoot.openOverviewAll();
     }
 
+    LazyLoader {
+        active: shellRoot.settingsOpen
+
+        SettingsWindow {
+            screen: shellRoot.primaryScreen
+            onCloseRequested: shellRoot.settingsOpen = false
+        }
+    }
+
     IpcHandler {
         target: "tide"
+
+        function toggleSettings() {
+            shellRoot.settingsOpen = !shellRoot.settingsOpen;
+        }
 
         function toggleAppLauncher() {
             shellRoot.forEachWindow(window => {
@@ -95,18 +109,6 @@ Scope {
                     ic.showWallpaperPicker();
             });
         }
-        function toggleAiTranslate() {
-            shellRoot.forEachWindow(window => {
-                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
-                    return;
-                const ic = window.islandContainerRef;
-                if (ic.islandState === "ai_translate")
-                    ic.smartRestoreState();
-                else
-                    ic.showAiTranslate();
-            });
-        }
-
         function toggleClipboardHistory() {
             shellRoot.forEachWindow(window => {
                 if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
@@ -187,13 +189,6 @@ Scope {
             });
         }
 
-        function toggleAlcoveMusicCapsule() {
-            shellRoot.forEachWindow(window => {
-                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
-                    return;
-                window.islandContainerRef.toggleAlcoveMusicCapsule();
-            });
-        }
     }
 
     IpcHandler {

@@ -8,7 +8,6 @@ Item {
     readonly property var userConfig: UserConfig
 
     property var items: []
-    property var cavaLevels: []
     property string timeText: ""
     property var configSource: null
     readonly property var activeConfig: configSource || userConfig
@@ -103,26 +102,18 @@ Item {
 
             delegate: Item {
                 readonly property bool hasIcon: modelData.icon !== undefined && modelData.icon !== ""
-                readonly property bool isCava: modelData.kind === "cava"
                 readonly property bool isBattery: modelData.kind === "battery"
                 readonly property bool isThemeIcon: hasIcon && modelData.iconKind === "theme"
                 readonly property bool isGlyphIcon: hasIcon && modelData.iconKind !== "theme"
                 readonly property bool hasLeadingVisual: hasIcon || isBattery
-                implicitWidth: isCava ? cavaBars.implicitWidth : isBattery ? (root.batteryIconWidth + (modelData.isCharging ? 0 : 0)) : leadingVisual.width + (hasLeadingVisual ? root.iconSpacing : 0) + valueText.implicitWidth
+                implicitWidth: isBattery ? (root.batteryIconWidth + (modelData.isCharging ? 0 : 0)) : leadingVisual.width + (hasLeadingVisual ? root.iconSpacing : 0) + valueText.implicitWidth
                 implicitHeight: root.height
                 width: implicitWidth
                 height: implicitHeight
 
-                SwipeCavaBars {
-                    id: cavaBars
-                    visible: parent.isCava
-                    anchors.centerIn: parent
-                    levels: root.cavaLevels
-                }
-
                 Item {
                     id: leadingVisual
-                    visible: !parent.isCava && parent.hasLeadingVisual
+                    visible: parent.hasLeadingVisual
                     width: parent.isBattery ? root.batteryIconWidth : (parent.hasIcon ? root.iconBoxSize : 0)
                     height: parent.isBattery ? Math.max(root.batteryIconHeight, valueText.implicitHeight) : root.iconBoxSize
                     anchors.left: parent.left
@@ -264,7 +255,7 @@ Item {
 
                 Text {
                     id: valueText
-                    visible: !parent.isCava && !parent.isBattery
+                    visible: !parent.isBattery
                     anchors.left: leadingVisual.right
                     anchors.leftMargin: parent.hasLeadingVisual && !parent.isBattery ? root.iconSpacing : 0
                     anchors.verticalCenter: parent.verticalCenter

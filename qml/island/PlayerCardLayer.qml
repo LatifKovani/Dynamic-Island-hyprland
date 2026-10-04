@@ -14,6 +14,7 @@ Item {
     property string timePlayed: "0:00"
     property string timeTotal: "0:00"
     property real trackProgress: 0
+    property var cavaLevels: []
     property string iconFontFamily: ""
     property string textFontFamily: ""
     property bool progressDragging: seekArea.pressed
@@ -192,16 +193,46 @@ Item {
         anchors.right: parent.right
         anchors.rightMargin: 18
         y: 112 - 14
-        height: 28
+        height: 36
 
         readonly property real shownProgress: seekArea.pressed ? root.dragProgress : root.trackProgress
+
+        Row {
+            id: cavaRow
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: 12
+            spacing: 3
+
+            Repeater {
+                model: 8
+
+                delegate: Rectangle {
+                    readonly property real rawLevel: root.cavaLevels && index < root.cavaLevels.length ? Number(root.cavaLevels[index]) : 0
+                    readonly property real level: Math.max(0, Math.min(1, isNaN(rawLevel) ? 0 : rawLevel))
+
+                    width: 3
+                    height: 3 + 9 * level
+                    radius: width / 2
+                    color: root.isPlaying ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.32)
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Behavior on height {
+                        NumberAnimation {
+                            duration: 90
+                            easing.type: Easing.InOutQuad
+                        }
+                    }
+                }
+            }
+        }
 
         Rectangle {
             id: track
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            anchors.topMargin: 3
+            anchors.topMargin: 15
             height: 4
             radius: 2
             color: Qt.rgba(1, 1, 1, 0.18)

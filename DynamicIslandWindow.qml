@@ -30,7 +30,6 @@ PanelWindow {
     readonly property bool connectivityPromptActive: controlCenterLoader.item ? controlCenterLoader.item.hasConnectivityPrompt : false
     readonly property int currentMonitorWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : 1
     readonly property bool screenRecordingActive: shellRootController && shellRootController.screenRecordingActive !== undefined ? !!shellRootController.screenRecordingActive : false
-    readonly property real aiTranslateWindowHeight: islandContainer.islandState === "ai_translate" ? 4 + 480 + 12 : 0
 
     readonly property var userConfig: UserConfig
 
@@ -95,17 +94,17 @@ PanelWindow {
             height: bluetoothConnectivityDetailShell.visible ? Math.ceil(bluetoothConnectivityDetailShell.height) : 0
         }
     }
-    implicitHeight: root.overviewVisible ? Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(4 + root.overviewCapsuleHeight + 8), Math.ceil(root.controlCenterWindowHeight), Math.ceil(root.aiTranslateWindowHeight)) : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight), Math.ceil(root.aiTranslateWindowHeight))
+    implicitHeight: root.overviewVisible ? Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(4 + root.overviewCapsuleHeight + 8), Math.ceil(root.controlCenterWindowHeight)) : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight))
     exclusiveZone: 45
     aboveWindows: true
-    focusable: islandContainer.appLauncherLayerVisible || islandContainer.polkitAuthLayerVisible || islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible || islandContainer.aiTranslateLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
+    focusable: islandContainer.appLauncherLayerVisible || islandContainer.polkitAuthLayerVisible || islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: {
         if (islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible)
             return WlrKeyboardFocus.Exclusive;
         if (!root.monitorFocused)
             return WlrKeyboardFocus.None;
-        if (islandContainer.appLauncherLayerVisible || islandContainer.powerMenuLayerVisible || islandContainer.aiTranslateLayerVisible || islandContainer.polkitAuthLayerVisible)
+        if (islandContainer.appLauncherLayerVisible || islandContainer.powerMenuLayerVisible || islandContainer.polkitAuthLayerVisible)
             return WlrKeyboardFocus.Exclusive;
         if (root.overviewVisible || root.connectivityPromptActive || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen))
             return WlrKeyboardFocus.OnDemand;
@@ -367,6 +366,7 @@ PanelWindow {
 
     IslandClock {
         id: timeObj
+        use24h: UiSettings.clock24h
     }
 
     TextMetrics {
@@ -418,16 +418,15 @@ PanelWindow {
         property bool playerCardPressed: false
         property bool playerCardOpenedByHover: false
         property bool controlCenterOpenedByHover: false
-        readonly property int hoverCloseDelay: 400
-        readonly property int controlCenterCloseDelay: 400
-        readonly property int statusHoverOpenDelay: 120
-        readonly property real circleSize: 34
-        readonly property real restWidth: 124
-        readonly property real restHeight: 34
-        readonly property real circleGap: 14
+        readonly property int hoverCloseDelay: UiSettings.hoverCloseDelay
+        readonly property int controlCenterCloseDelay: UiSettings.controlCenterCloseDelay
+        readonly property int statusHoverOpenDelay: UiSettings.statusHoverOpenDelay
+        readonly property real circleSize: UiSettings.circleSize
+        readonly property real restWidth: UiSettings.restWidth
+        readonly property real restHeight: UiSettings.restHeight
+        readonly property real circleGap: UiSettings.circleGap
         readonly property real playerCardWidth: 410
         readonly property real playerCardHeight: 184
-        property string alcoveReturnState: "normal"
         property string workspaceReturnState: ""
         property string preloadedArtUrl: ""
         property bool preloadedArtReady: false
@@ -440,7 +439,7 @@ PanelWindow {
         readonly property int bluetoothExpandedAutoHideInterval: 2500
         readonly property int swipeAnimationDuration: 220
 
-        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "alcove_music" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker" || islandState === "clipboard_history" || islandState === "lock_unlock" || islandState === "ai_translate" || islandState === "polkit_auth"
+        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker" || islandState === "clipboard_history" || islandState === "lock_unlock" || islandState === "polkit_auth"
 
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
@@ -456,12 +455,11 @@ PanelWindow {
         readonly property bool expandedLayerVisible: !root.overviewVisible && islandState === "expanded"
         readonly property bool calendarLayerVisible: !root.overviewVisible && islandState === "calendar"
         readonly property bool smallPillState: islandState === "normal" || islandState === "custom" || islandState === "lyrics" || islandState === "calendar" || islandState === "split" || islandState === "long_capsule"
-        readonly property bool statusCircleVisible: !root.overviewVisible && (smallPillState || (islandState === "control_center" && !root.anyConnectivityDetailMounted))
-        readonly property bool albumCircleVisible: !root.overviewVisible && smallPillState && activePlayer !== null && !playerCardOpen
+        readonly property bool statusCircleVisible: !root.overviewVisible && ((smallPillState && UiSettings.showStatusCircle) || (islandState === "control_center" && !root.anyConnectivityDetailMounted))
+        readonly property bool albumCircleVisible: !root.overviewVisible && UiSettings.showAlbumCircle && smallPillState && activePlayer !== null && !playerCardOpen
         readonly property bool playerCardAllowed: !root.overviewVisible && (smallPillState || islandState === "notification" || islandState === "bluetooth_expanded")
         readonly property bool playerCardVisible: playerCardOpen && playerCardAllowed
         readonly property string circleArtSource: preloadedArtReady && artPreloader.source ? artPreloader.source : currentArtUrl
-        readonly property bool alcoveMusicLayerVisible: !root.overviewVisible && islandState === "alcove_music"
         readonly property bool bluetoothExpandedLayerVisible: !root.overviewVisible && islandState === "bluetooth_expanded"
         readonly property bool notificationLayerVisible: !root.overviewVisible && islandState === "notification"
         readonly property bool controlCenterLayerVisible: !root.overviewVisible && islandState === "control_center"
@@ -478,8 +476,6 @@ PanelWindow {
         readonly property bool screenRecordingActive: root.screenRecordingActive
         readonly property bool wallpaperPickerLayerVisible: !root.overviewVisible && islandState === "wallpaper_picker"
         readonly property bool clipboardHistoryLayerVisible: !root.overviewVisible && islandState === "clipboard_history"
-        readonly property bool aiTranslateLayerVisible: !root.overviewVisible && islandState === "ai_translate"
-
         readonly property bool polkitAuthLayerVisible: !root.overviewVisible && islandState === "polkit_auth"
 
         readonly property bool lockUnlockLayerVisible: !root.overviewVisible && islandState === "lock_unlock"
@@ -556,8 +552,7 @@ PanelWindow {
             timeText: timeObj.currentTime
             dateText: timeObj.currentDateLabel
             currentWorkspace: islandContainer.currentWs
-            customSwipeActive: customSwipeLoader.active
-            musicActive: islandContainer.alcoveMusicLayerVisible
+            playerCardActive: islandContainer.playerCardVisible
             monitorFocused: root.monitorFocused
         }
 
@@ -645,12 +640,6 @@ PanelWindow {
                 } else {
                     togglePlayerCard();
                 }
-                return;
-            case "toggleAlcoveMusicCapsule":
-                if (islandState === "alcove_music")
-                    smartRestoreState();
-                else
-                    showAlcoveMusicCapsule();
                 return;
             case "openExpandedPlayer":
                 openPlayerCard(false);
@@ -781,33 +770,6 @@ PanelWindow {
             notificationBody = "";
             islandState = "notification";
             stopAutoHideTimer();
-        }
-
-        function toggleAlcoveMusicCapsule() {
-            if (islandState === "alcove_music")
-                smartRestoreState();
-            else
-                showAlcoveMusicCapsule();
-        }
-
-        function showAlcoveMusicCapsule() {
-            cancelSideSwipeSettle();
-            abortSideTransientMode();
-            clearTransientCapsule();
-            if (islandState !== "alcove_music")
-                alcoveReturnState = islandState === "expanded" ? "expanded" : normalizeRestingState(restingState);
-            islandState = "alcove_music";
-            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
-            stopAutoHideTimer();
-        }
-
-        function restoreAlcoveMusicCapsule() {
-            const returnState = alcoveReturnState === "alcove_music" ? "normal" : alcoveReturnState;
-            if (returnState === "expanded") {
-                showExpandedPlayer(expandedByPlayerAutoOpen);
-                return;
-            }
-            showRestingCapsule(returnState);
         }
 
         function setOsdProgress(nextProgress, animate) {
@@ -1084,17 +1046,13 @@ PanelWindow {
         }
 
         function smartRestoreState() {
-            if (islandState === "alcove_music") {
-                restoreAlcoveMusicCapsule();
-                return;
-            }
             if (islandState === "long_capsule" && workspaceReturnState !== "") {
                 const target = workspaceReturnState;
                 workspaceReturnState = "";
                 if (target === "expanded") {
                     showExpandedPlayer(expandedByPlayerAutoOpen);
                 } else {
-                    showAlcoveMusicCapsule();
+                    restoreRestingCapsule();
                 }
                 return;
             }
@@ -1163,7 +1121,7 @@ PanelWindow {
             if (pillLive()) {
                 calendarCloseTimer.stop();
                 hoverCloseTimer.stop();
-                if (islandState === "normal" || islandState === "custom")
+                if (UiSettings.hoverCalendar && (islandState === "normal" || islandState === "custom"))
                     showCalendarCapsule();
             } else if (islandState === "calendar") {
                 calendarCloseTimer.restart();
@@ -1173,7 +1131,7 @@ PanelWindow {
             if (cardLive()) {
                 cardCloseTimer.stop();
                 playerCardCloseTimer.stop();
-                if (albumCircle.hovered && !playerCardOpen && activePlayer && playerCardAllowed && smallPillState) {
+                if (UiSettings.hoverPlayerCard && albumCircle.hovered && !playerCardOpen && activePlayer && playerCardAllowed && smallPillState) {
                     playerCardOpen = true;
                     playerCardAutoOpened = false;
                     playerCardOpenedByHover = true;
@@ -1183,7 +1141,7 @@ PanelWindow {
             }
 
             // 3) control center: status circle opens it, leaving closes it
-            if (statusCircle.hovered) {
+            if (statusCircle.hovered && UiSettings.hoverControlCenter) {
                 if (islandState !== "control_center" && !statusHoverOpenTimer.running)
                     statusHoverOpenTimer.start();
             } else {
@@ -1290,14 +1248,6 @@ PanelWindow {
             mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
             stopAutoHideTimer();
         }
-        function showAiTranslate() {
-            cancelSideSwipeSettle();
-            abortSideTransientMode();
-            clearTransientCapsule();
-            islandState = "ai_translate";
-            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
-            stopAutoHideTimer();
-        }
         function showPolkitAuth() {
             cancelSideSwipeSettle();
             abortSideTransientMode();
@@ -1363,7 +1313,7 @@ PanelWindow {
             currentWs = wsId;
             if (islandState === "control_center" || islandState === "notification")
                 return;
-            if (islandState === "alcove_music" || islandState === "expanded") {
+            if (islandState === "expanded") {
                 workspaceReturnState = islandState;
             } else if (islandState !== "long_capsule") {
                 workspaceReturnState = "";
@@ -1483,8 +1433,6 @@ PanelWindow {
             if (userConfig.disableAutoExpandOnTrackChange)
                 return;
             if (currentTrack !== "" && islandState !== "control_center" && islandState !== "notification" && islandState !== "bluetooth_expanded" && islandState !== "lock_unlock") {
-                if (islandState === "alcove_music")
-                    return;
                 if (playerCardOpen && !playerCardAutoOpened)
                     return;
                 openPlayerCard(true);
@@ -1607,6 +1555,7 @@ PanelWindow {
                     PlayerCardLayer {
                         showCondition: islandContainer.playerCardVisible
                         activePlayer: islandContainer.activePlayer
+                        cavaLevels: islandContainer.cavaLevels
                         artSource: islandContainer.circleArtSource
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
@@ -1671,16 +1620,12 @@ PanelWindow {
                     return 1100;
                 case "clipboard_history":
                     return 460;
-                case "ai_translate":
-                    return 600;
                 case "polkit_auth":
                     return 420;
                 case "calendar":
                     return 230;
                 case "expanded":
                     return 620;
-                case "alcove_music":
-                    return 230;
                 case "bluetooth_expanded":
                     return 400;
                 case "lock_unlock":
@@ -1709,16 +1654,12 @@ PanelWindow {
                     return 260;
                 case "clipboard_history":
                     return 390;
-                case "ai_translate":
-                    return 480;
                 case "polkit_auth":
                     return 260;
                 case "calendar":
                     return 112;
                 case "expanded":
                     return 192;
-                case "alcove_music":
-                    return 40;
                 case "bluetooth_expanded":
                     return 165;
                 case "lock_unlock":
@@ -1745,16 +1686,12 @@ PanelWindow {
                     return 34;
                 case "clipboard_history":
                     return 34;
-                case "ai_translate":
-                    return 34;
                 case "polkit_auth":
                     return 34;
                 case "calendar":
                     return 34;
                 case "expanded":
                     return 40;
-                case "alcove_music":
-                    return 20;
                 case "bluetooth_expanded":
                     return 40;
                 case "lock_unlock":
@@ -1857,7 +1794,7 @@ PanelWindow {
                 onContainsMouseChanged: islandContainer.hoverChanged()
                 onEntered: {
                     hoverCloseTimer.stop();
-                    if (islandContainer.islandState === "normal" || islandContainer.islandState === "custom")
+                    if (UiSettings.hoverCalendar && (islandContainer.islandState === "normal" || islandContainer.islandState === "custom"))
                         islandContainer.showCalendarCapsule();
                 }
                 onExited: {
@@ -1879,16 +1816,12 @@ PanelWindow {
                 property real swipeStartY: 0
                 property real swipeStartProgress: 0
                 property real swipeLastX: 0
-                property bool alcoveSwipeArmed: false
-                property bool alcoveSwipeMoved: false
                 readonly property real sideSwipeVerticalTolerance: 24
                 property bool swipeArmed: false
                 property bool swipeMoved: false
                 property bool sideSwipeInteractive: false
                 property bool suppressNextClick: false
                 property bool preparedOverviewOnPress: false
-                property bool stage2SwipeArmed: false
-                property bool stage2SwipeMoved: false
 
                 Timer {
                     id: swipeSuppressReset
@@ -1902,15 +1835,10 @@ PanelWindow {
                     swipeStartX = mappedPoint.x;
                     swipeStartY = mappedPoint.y;
                     islandContainer.cancelSideSwipeSettle();
-                    const inLyrics = islandContainer.islandState === "lyrics";
-                    stage2SwipeArmed = inLyrics && mouse.button === Qt.LeftButton;
-                    stage2SwipeMoved = false;
-                    swipeArmed = mouse.button === Qt.LeftButton && islandContainer.canShowSideSwipe && !inLyrics;
-                    alcoveSwipeArmed = mouse.button === Qt.LeftButton && !root.overviewVisible && (islandContainer.islandState === "normal" || islandContainer.islandState === "custom" || islandContainer.islandState === "lyrics" || islandContainer.islandState === "calendar" || islandContainer.islandState === "expanded");
+                    swipeArmed = mouse.button === Qt.LeftButton && islandContainer.canShowSideSwipe;
                     swipeStartProgress = islandContainer.swipeTransitionProgress;
                     swipeLastX = mappedPoint.x;
                     swipeMoved = false;
-                    alcoveSwipeMoved = false;
                     sideSwipeInteractive = swipeArmed;
                     islandContainer.swipeTransitionProgress = swipeStartProgress;
 
@@ -1934,22 +1862,6 @@ PanelWindow {
                     const deltaY = mappedPoint.y - swipeStartY;
                     const absDeltaY = Math.abs(deltaY);
                     const absDeltaX = Math.abs(mappedPoint.x - swipeStartX);
-                    if (stage2SwipeArmed) {
-                        const totalDeltaX = mappedPoint.x - swipeStartX;
-                        console.log("stage2 check: totalDeltaX=", totalDeltaX, "deltaY=", Math.abs(deltaY), "tolerance=", sideSwipeVerticalTolerance, "moved=", stage2SwipeMoved);
-                        if (totalDeltaX > 18 && Math.abs(deltaY) < sideSwipeVerticalTolerance) {
-                            stage2SwipeMoved = true;
-                            suppressNextClick = true;
-                            console.log("stage2SwipeMoved SET");
-                        }
-                    }
-                    if (alcoveSwipeArmed && deltaY < -14 && absDeltaY > absDeltaX + 6) {
-                        alcoveSwipeMoved = true;
-                        swipeArmed = false;
-                        sideSwipeInteractive = false;
-                        suppressNextClick = true;
-                        return;
-                    }
                     if (!swipeArmed)
                         return;
                     const adjustedDeltaX = absDeltaY < sideSwipeVerticalTolerance ? deltaX : 0;
@@ -1961,33 +1873,6 @@ PanelWindow {
                 }
 
                 onReleased: {
-                    console.log("onReleased: stage2SwipeMoved=", stage2SwipeMoved, "stage2SwipeArmed=", stage2SwipeArmed, "alcoveSwipeMoved=", alcoveSwipeMoved, "swipeMoved=", swipeMoved, "islandState=", islandContainer.islandState);
-                    if (stage2SwipeMoved) {
-                        if (preparedOverviewOnPress)
-                            root.cancelPreparedOverviewEverywhere();
-                        preparedOverviewOnPress = false;
-                        stage2SwipeArmed = false;
-                        stage2SwipeMoved = false;
-                        suppressNextClick = true;
-                        swipeSuppressReset.restart();
-                        islandContainer.alcoveReturnState = "lyrics";
-                        islandContainer.showAlcoveMusicCapsule();
-                        return;
-                    }
-                    if (alcoveSwipeMoved) {
-                        if (preparedOverviewOnPress)
-                            root.cancelPreparedOverviewEverywhere();
-                        preparedOverviewOnPress = false;
-                        islandContainer.showAlcoveMusicCapsule();
-                        alcoveSwipeArmed = false;
-                        alcoveSwipeMoved = false;
-                        swipeArmed = false;
-                        swipeMoved = false;
-                        sideSwipeInteractive = false;
-                        suppressNextClick = true;
-                        swipeSuppressReset.restart();
-                        return;
-                    }
                     if (swipeMoved) {
                         if (preparedOverviewOnPress)
                             root.cancelPreparedOverviewEverywhere();
@@ -2030,8 +1915,6 @@ PanelWindow {
                     }
                     swipeArmed = false;
                     swipeMoved = false;
-                    alcoveSwipeArmed = false;
-                    alcoveSwipeMoved = false;
                 }
 
                 onCanceled: {
@@ -2039,11 +1922,7 @@ PanelWindow {
                         root.cancelPreparedOverviewEverywhere();
                     swipeArmed = false;
                     swipeMoved = false;
-                    alcoveSwipeArmed = false;
-                    alcoveSwipeMoved = false;
                     sideSwipeInteractive = false;
-                    stage2SwipeArmed = false;
-                    stage2SwipeMoved = false;
                     suppressNextClick = false;
                     preparedOverviewOnPress = false;
                     swipeSuppressReset.stop();
@@ -2136,7 +2015,6 @@ PanelWindow {
                 sourceComponent: Component {
                     SwipeCustomInfoLayer {
                         items: islandContainer.customLeftItems
-                        cavaLevels: islandContainer.cavaLevels
                         timeText: timeObj.currentTime
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.heroFontFamily
@@ -2287,6 +2165,7 @@ PanelWindow {
                         heroFontFamily: root.heroFontFamily
                         textFontFamily: root.textFontFamily
                         showCondition: islandContainer.calendarLayerVisible
+                        visibleDays: UiSettings.calendarDays
                     }
                 }
             }
@@ -2305,24 +2184,6 @@ PanelWindow {
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         showCondition: islandContainer.bluetoothExpandedLayerVisible
-                    }
-                }
-            }
-
-            Loader {
-                id: alcoveMusicLoader
-                anchors.fill: parent
-                active: islandContainer.alcoveMusicLayerVisible
-                asynchronous: false
-                visible: active
-                sourceComponent: Component {
-                    AlcoveMusicCapsule {
-                        currentArtUrl: islandContainer.currentArtUrl
-                        preloadedArtSource: islandContainer.preloadedArtReady ? artPreloader.source : ""
-                        cavaLevels: islandContainer.cavaLevels
-                        iconFontFamily: root.iconFontFamily
-                        showCondition: islandContainer.alcoveMusicLayerVisible
-                        onCloseRequested: islandContainer.smartRestoreState()
                     }
                 }
             }
@@ -2413,23 +2274,6 @@ PanelWindow {
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         showCondition: islandContainer.clipboardHistoryLayerVisible
-                        onCloseRequested: islandContainer.smartRestoreState()
-                    }
-                }
-            }
-            Loader {
-                id: aiTranslateLoader
-                anchors.fill: parent
-                property bool keepAlive: false
-                active: islandContainer.aiTranslateLayerVisible || keepAlive
-                onLoaded: keepAlive = true
-                asynchronous: false
-                visible: islandContainer.aiTranslateLayerVisible
-                sourceComponent: Component {
-                    AiTranslateLayer {
-                        iconFontFamily: root.iconFontFamily
-                        textFontFamily: root.textFontFamily
-                        showCondition: islandContainer.aiTranslateLayerVisible
                         onCloseRequested: islandContainer.smartRestoreState()
                     }
                 }
