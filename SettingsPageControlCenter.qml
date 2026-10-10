@@ -65,6 +65,73 @@ SettingsPage {
     }
 
     SettingsGroup {
+        title: "Weather"
+
+        SettingsRow {
+            title: "Show weather in the header"
+            description: "A small chip next to the date. Click it for the forecast"
+            SettingsSwitch {
+                checked: UiSettings.weatherEnabled
+                onToggled: v => UiSettings.weatherEnabled = v
+            }
+        }
+
+        SettingsSegmented {
+            title: "Units"
+            options: [
+                {
+                    label: "Metric (°C)",
+                    value: "metric"
+                },
+                {
+                    label: "Imperial (°F)",
+                    value: "imperial"
+                }
+            ]
+            current: UiSettings.weatherUnits
+            onPicked: v => UiSettings.weatherUnits = v
+        }
+
+        SettingsRow {
+            title: "Location"
+            description: "City name. Leave empty to detect it automatically"
+            last: true
+
+            Rectangle {
+                width: 180
+                height: 30
+                radius: 10
+                color: SettingsTheme.panelRaised
+                border.width: locationInput.activeFocus ? 1 : 0
+                border.color: SettingsTheme.accent
+
+                TextInput {
+                    id: locationInput
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    verticalAlignment: TextInput.AlignVCenter
+                    color: SettingsTheme.text
+                    font.pixelSize: 13
+                    selectByMouse: true
+                    clip: true
+                    text: UiSettings.weatherLocation
+
+                    Connections {
+                        target: UiSettings
+                        function onWeatherLocationChanged() {
+                            if (!locationInput.activeFocus)
+                                locationInput.text = UiSettings.weatherLocation;
+                        }
+                    }
+
+                    onEditingFinished: UiSettings.weatherLocation = text.trim()
+                }
+            }
+        }
+    }
+
+    SettingsGroup {
         SettingsRow {
             title: "Reset Control Center"
             description: "Restore the default layout"
@@ -85,7 +152,10 @@ SettingsPage {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: UiSettings.resetControlCenter()
+                    onClicked: {
+                        UiSettings.resetControlCenter();
+                        UiSettings.resetWeather();
+                    }
                 }
             }
         }

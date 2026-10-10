@@ -32,6 +32,7 @@ PanelWindow {
     readonly property bool screenRecordingActive: shellRootController && shellRootController.screenRecordingActive !== undefined ? !!shellRootController.screenRecordingActive : false
 
     readonly property var userConfig: UserConfig
+    readonly property var weatherService: shellRootController ? shellRootController.weatherService : null
 
     HyprlandDispatch {
         id: hyprDispatch
@@ -66,6 +67,13 @@ PanelWindow {
         }
         Region {
             intersection: Intersection.Combine
+            x: Math.floor(fileShelfBubble.x)
+            y: Math.floor(fileShelfBubble.y)
+            width: fileShelfBubble.visible ? Math.ceil(fileShelfBubble.width) : 0
+            height: fileShelfBubble.visible ? Math.ceil(fileShelfBubble.height) : 0
+        }
+        Region {
+            intersection: Intersection.Combine
             x: Math.floor(albumCircle.x)
             y: Math.floor(albumCircle.y)
             width: albumCircle.visible ? Math.ceil(albumCircle.width) : 0
@@ -93,14 +101,22 @@ PanelWindow {
             width: bluetoothConnectivityDetailShell.visible ? Math.ceil(bluetoothConnectivityDetailShell.width) : 0
             height: bluetoothConnectivityDetailShell.visible ? Math.ceil(bluetoothConnectivityDetailShell.height) : 0
         }
+
+        Region {
+            intersection: Intersection.Combine
+            x: Math.floor(calendarNoteShell.x)
+            y: Math.floor(calendarNoteShell.y)
+            width: calendarNoteShell.visible ? Math.ceil(calendarNoteShell.width) : 0
+            height: calendarNoteShell.visible ? Math.ceil(calendarNoteShell.height) : 0
+        }
     }
     implicitHeight: root.overviewVisible ? Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(4 + root.overviewCapsuleHeight + 8), Math.ceil(root.controlCenterWindowHeight)) : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight))
     exclusiveZone: 45
     aboveWindows: true
-    focusable: islandContainer.appLauncherLayerVisible || islandContainer.polkitAuthLayerVisible || islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
+    focusable: islandContainer.appLauncherLayerVisible || islandContainer.polkitAuthLayerVisible || islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible || islandContainer.monthCalendarLayerVisible || islandContainer.weatherLayerVisible || (islandContainer.fileShelfLayerVisible && islandContainer.fileShelfOpenedManually) || (root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.powerMenuLayerVisible || (islandContainer.expandedLayerVisible && !islandContainer.expandedByPlayerAutoOpen)))
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: {
-        if (islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible)
+        if (islandContainer.wallpaperPickerLayerVisible || islandContainer.clipboardHistoryLayerVisible || islandContainer.monthCalendarLayerVisible || islandContainer.weatherLayerVisible || (islandContainer.fileShelfLayerVisible && islandContainer.fileShelfOpenedManually))
             return WlrKeyboardFocus.Exclusive;
         if (!root.monitorFocused)
             return WlrKeyboardFocus.None;
@@ -441,7 +457,7 @@ PanelWindow {
         readonly property int bluetoothExpandedAutoHideInterval: 2500
         readonly property int swipeAnimationDuration: 220
 
-        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker" || islandState === "clipboard_history" || islandState === "lock_unlock" || islandState === "polkit_auth"
+        readonly property bool blocksTransientSplit: islandState === "expanded" || islandState === "bluetooth_expanded" || islandState === "control_center" || islandState === "notification" || islandState === "power_menu" || islandState === "app_launcher" || islandState === "wallpaper_picker" || islandState === "clipboard_history" || islandState === "file_shelf" || islandState === "month_calendar" || islandState === "weather" || islandState === "lock_unlock" || islandState === "polkit_auth"
 
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
@@ -456,6 +472,22 @@ PanelWindow {
         readonly property bool lyricsSwipeVisible: !root.overviewVisible && (capsuleMouseArea.sideSwipeInteractive ? swipeTransitionProgress >= 0 : (islandState === "lyrics" || (islandState === "normal" && swipeTransitionProgress >= 0) || (islandState === "split" && splitOriginSide === "right") || (islandState === "long_capsule" && (workspaceOriginSide === "right" || swipeTransitionProgress > 0))))
         readonly property bool expandedLayerVisible: !root.overviewVisible && islandState === "expanded"
         readonly property bool calendarLayerVisible: !root.overviewVisible && islandState === "calendar"
+        readonly property bool monthCalendarLayerVisible: !root.overviewVisible && islandState === "month_calendar"
+        readonly property bool weatherLayerVisible: !root.overviewVisible && islandState === "weather"
+        // day the full calendar should open on (set by showMonthCalendar)
+        property int monthCalendarYear: -1
+        property int monthCalendarMonth: -1
+        property int monthCalendarDay: -1
+        // true once the pointer has been over the open full calendar (so it never auto-closes if it was opened with the pointer elsewhere)
+        property bool monthCalendarPointerSeen: false
+        // same idea for the control center when it was opened by click
+        property bool controlCenterPointerSeen: false
+        property bool weatherPointerSeen: false
+        // File shelf: true when opened by click/shortcut, false when opened by dragging files over the island
+        property bool fileShelfOpenedManually: false
+        readonly property bool fileShelfIdleState: !root.overviewVisible && (islandState === "normal" || islandState === "lyrics" || islandState === "custom")
+        readonly property bool fileShelfBubbleWanted: FileShelf.count > 0 && fileShelfIdleState
+        readonly property bool fileShelfCanAutoOpen: fileShelfIdleState
         readonly property bool smallPillState: islandState === "normal" || islandState === "custom" || islandState === "lyrics" || islandState === "calendar" || islandState === "split" || islandState === "long_capsule"
         readonly property bool statusCircleVisible: !root.overviewVisible && ((smallPillState && UiSettings.showStatusCircle) || (islandState === "control_center" && !root.anyConnectivityDetailMounted))
         readonly property bool albumCircleVisible: !root.overviewVisible && UiSettings.showAlbumCircle && smallPillState && activePlayer !== null && !playerCardOpen
@@ -478,6 +510,7 @@ PanelWindow {
         readonly property bool screenRecordingActive: root.screenRecordingActive
         readonly property bool wallpaperPickerLayerVisible: !root.overviewVisible && islandState === "wallpaper_picker"
         readonly property bool clipboardHistoryLayerVisible: !root.overviewVisible && islandState === "clipboard_history"
+        readonly property bool fileShelfLayerVisible: !root.overviewVisible && islandState === "file_shelf"
         readonly property bool polkitAuthLayerVisible: !root.overviewVisible && islandState === "polkit_auth"
 
         readonly property bool lockUnlockLayerVisible: !root.overviewVisible && islandState === "lock_unlock"
@@ -507,6 +540,11 @@ PanelWindow {
                 lockUnlockResetting = false;
                 skipWidthAnimation = false;
             }
+        }
+
+        onFileShelfLayerVisibleChanged: {
+            if (!fileShelfLayerVisible)
+                fileShelfOpenedManually = false;
         }
 
         onCustomLeftItemsChanged: {
@@ -1108,8 +1146,8 @@ PanelWindow {
 
         // ---- hover groups (independent of each other) ----
         //  pill            -> calendar only
-        //  album circle / player card -> player card only
-        //  status circle   -> control center (closes 1 s after leaving)
+        //  album circle / player card -> player card only (opened by click)
+        //  status circle   -> control center (opened by click)
         // Decisions read the live hover state of the items, never a cached copy.
         function pillLive() {
             return capsuleMouseArea.containsMouse || capsuleHoverHandler.hovered;
@@ -1135,31 +1173,42 @@ PanelWindow {
                 calendarCloseTimer.restart();
             }
 
+            // 1b) full month calendar: closes shortly after the pointer leaves it
+            if (islandState === "month_calendar") {
+                if (pillLive()) {
+                    monthCalendarPointerSeen = true;
+                    monthCalendarCloseTimer.stop();
+                } else if (monthCalendarPointerSeen) {
+                    monthCalendarCloseTimer.restart();
+                }
+            }
+
+            // 1c) weather panel: closes shortly after the pointer leaves it
+            if (islandState === "weather") {
+                if (pillLive()) {
+                    weatherPointerSeen = true;
+                    weatherCloseTimer.stop();
+                } else if (weatherPointerSeen) {
+                    weatherCloseTimer.restart();
+                }
+            }
+
             // 2) player card: only the album circle / the card itself
             if (cardLive()) {
                 cardCloseTimer.stop();
                 playerCardCloseTimer.stop();
-                if (UiSettings.hoverPlayerCard && albumCircle.hovered && !playerCardOpen && activePlayer && playerCardAllowed && smallPillState) {
-                    playerCardOpen = true;
-                    playerCardAutoOpened = false;
-                    playerCardOpenedByHover = true;
-                }
             } else if (playerCardOpen) {
                 cardCloseTimer.restart();
             }
 
-            // 3) control center: status circle opens it, leaving closes it
-            if (statusCircle.hovered && UiSettings.hoverControlCenter) {
-                if (islandState !== "control_center" && !statusHoverOpenTimer.running)
-                    statusHoverOpenTimer.start();
-            } else {
-                statusHoverOpenTimer.stop();
-            }
-            if (islandState === "control_center" && controlCenterOpenedByHover) {
-                if (controlCenterLive())
+            // 3) control center: opened by click only (the status circle no longer opens on hover)
+            if (islandState === "control_center") {
+                if (controlCenterLive()) {
+                    controlCenterPointerSeen = true;
                     controlCenterCloseTimer.stop();
-                else
+                } else if (controlCenterOpenedByHover || controlCenterPointerSeen) {
                     controlCenterCloseTimer.restart();
+                }
             }
         }
 
@@ -1225,6 +1274,7 @@ PanelWindow {
             cancelSideSwipeSettle();
             abortSideTransientMode();
             clearTransientCapsule();
+            controlCenterPointerSeen = controlCenterLive();
             islandState = "control_center";
             mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
             stopAutoHideTimer();
@@ -1248,6 +1298,51 @@ PanelWindow {
             stopAutoHideTimer();
         }
 
+        function dragCarriesFiles(dragEvent) {
+            if (!dragEvent)
+                return false;
+            if (dragEvent.hasUrls)
+                return true;
+            const formats = dragEvent.formats || [];
+            return formats.indexOf("text/uri-list") >= 0
+                || formats.indexOf("x-special/gnome-copied-files") >= 0;
+        }
+
+        function addFilesFromDrop(dropEvent) {
+            if (!dropEvent)
+                return 0;
+            let added = 0;
+            if (dropEvent.hasUrls)
+                added += FileShelf.addUrls(dropEvent.urls);
+            const formats = dropEvent.formats || [];
+            if (added === 0 && formats.indexOf("text/uri-list") >= 0)
+                added += FileShelf.addUriList(dropEvent.getDataAsString("text/uri-list"));
+            if (added === 0 && formats.indexOf("x-special/gnome-copied-files") >= 0)
+                added += FileShelf.addUriList(dropEvent.getDataAsString("x-special/gnome-copied-files"));
+            return added;
+        }
+
+        function showFileShelf(manuallyOpened) {
+            const manual = manuallyOpened === true;
+            if (islandState === "file_shelf") {
+                if (manual)
+                    fileShelfOpenedManually = true;
+                return;
+            }
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            fileShelfOpenedManually = manual;
+            islandState = "file_shelf";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
+        function closeAutoOpenedFileShelf() {
+            if (islandState === "file_shelf" && !fileShelfOpenedManually)
+                smartRestoreState();
+        }
+
         function showClipboardHistory() {
             cancelSideSwipeSettle();
             abortSideTransientMode();
@@ -1256,6 +1351,30 @@ PanelWindow {
             mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
             stopAutoHideTimer();
         }
+        function showMonthCalendar(year, month, day) {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            monthCalendarYear = year === undefined ? -1 : year;
+            monthCalendarMonth = month === undefined ? -1 : month;
+            monthCalendarDay = day === undefined ? -1 : day;
+            monthCalendarPointerSeen = pillLive();
+            islandState = "month_calendar";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            expandedByPlayerAutoOpen = false;
+            stopAutoHideTimer();
+        }
+
+        function showWeather() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            weatherPointerSeen = pillLive();
+            islandState = "weather";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
         function showPolkitAuth() {
             cancelSideSwipeSettle();
             abortSideTransientMode();
@@ -1351,6 +1470,24 @@ PanelWindow {
             }
         }
         Timer {
+            id: weatherCloseTimer
+            interval: islandContainer.hoverCloseDelay
+            onTriggered: {
+                if (islandContainer.islandState === "weather" && islandContainer.weatherPointerSeen && !islandContainer.pillLive())
+                    islandContainer.smartRestoreState();
+            }
+        }
+        Timer {
+            id: monthCalendarCloseTimer
+            interval: islandContainer.hoverCloseDelay
+            onTriggered: {
+                const cal = monthCalendarLoader.item;
+                const editingNote = !!(cal && cal.noteOpen);
+                if (islandContainer.islandState === "month_calendar" && islandContainer.monthCalendarPointerSeen && !islandContainer.pillLive() && !editingNote)
+                    islandContainer.smartRestoreState();
+            }
+        }
+        Timer {
             id: cardCloseTimer
             interval: islandContainer.hoverCloseDelay
             onTriggered: {
@@ -1362,7 +1499,10 @@ PanelWindow {
             id: controlCenterCloseTimer
             interval: islandContainer.controlCenterCloseDelay
             onTriggered: {
-                if (islandContainer.islandState === "control_center" && islandContainer.controlCenterOpenedByHover && !islandContainer.controlCenterLive()) {
+                if (islandContainer.islandState === "control_center"
+                        && (islandContainer.controlCenterOpenedByHover || islandContainer.controlCenterPointerSeen)
+                        && !islandContainer.controlCenterLive()
+                        && !root.connectivityPromptActive) {
                     islandContainer.controlCenterOpenedByHover = false;
                     islandContainer.smartRestoreState();
                 }
@@ -1373,13 +1513,23 @@ PanelWindow {
             id: hoverWatchdog
             interval: 400
             repeat: true
-            running: islandContainer.playerCardOpen || islandContainer.islandState === "calendar" || islandContainer.controlCenterOpenedByHover
+            running: islandContainer.playerCardOpen || islandContainer.islandState === "calendar" || islandContainer.islandState === "month_calendar" || islandContainer.islandState === "weather" || islandContainer.islandState === "control_center" || islandContainer.controlCenterOpenedByHover
             onTriggered: {
                 if (islandContainer.islandState === "calendar" && !islandContainer.pillLive() && !calendarCloseTimer.running)
                     calendarCloseTimer.start();
+                if (islandContainer.islandState === "month_calendar" && islandContainer.monthCalendarPointerSeen && !islandContainer.pillLive() && !monthCalendarCloseTimer.running)
+                    monthCalendarCloseTimer.start();
+                if (islandContainer.islandState === "month_calendar" && islandContainer.pillLive())
+                    islandContainer.monthCalendarPointerSeen = true;
+                if (islandContainer.islandState === "weather" && islandContainer.weatherPointerSeen && !islandContainer.pillLive() && !weatherCloseTimer.running)
+                    weatherCloseTimer.start();
+                if (islandContainer.islandState === "weather" && islandContainer.pillLive())
+                    islandContainer.weatherPointerSeen = true;
                 if (islandContainer.playerCardOpen && !islandContainer.cardLive() && !cardCloseTimer.running && !playerCardCloseTimer.running)
                     cardCloseTimer.start();
-                if (islandContainer.islandState === "control_center" && islandContainer.controlCenterOpenedByHover && !islandContainer.controlCenterLive() && !controlCenterCloseTimer.running)
+                if (islandContainer.islandState === "control_center" && islandContainer.controlCenterLive())
+                    islandContainer.controlCenterPointerSeen = true;
+                if (islandContainer.islandState === "control_center" && (islandContainer.controlCenterOpenedByHover || islandContainer.controlCenterPointerSeen) && !islandContainer.controlCenterLive() && !controlCenterCloseTimer.running)
                     controlCenterCloseTimer.start();
             }
         }
@@ -1510,6 +1660,66 @@ PanelWindow {
             onHoveredChanged: islandContainer.hoverChanged()
         }
 
+        Item {
+            id: fileShelfBubble
+            readonly property int bubbleSize: 36
+            width: bubbleSize
+            height: bubbleSize
+            x: Math.min(mainCapsule.x, albumCircle.visible ? albumCircle.x : mainCapsule.x) - islandContainer.circleGap - width
+            y: 4 + (islandContainer.restHeight - height) / 2
+            z: 6
+            visible: islandContainer.fileShelfBubbleWanted
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: StyleTokens.black
+                border.width: 1
+                border.color: Qt.rgba(1, 1, 1, 0.14)
+
+                Text {
+                    anchors.centerIn: parent
+                    anchors.horizontalCenterOffset: -1
+                    text: "\uf08d"
+                    color: StyleTokens.textPrimary
+                    font.family: root.iconFontFamily
+                    font.pixelSize: 13
+                    rotation: -18
+                }
+
+                Rectangle {
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.rightMargin: -2
+                    anchors.bottomMargin: -2
+                    width: Math.max(17, shelfCountText.implicitWidth + 8)
+                    height: 17
+                    radius: height / 2
+                    color: StyleTokens.accent
+                    border.width: 2
+                    border.color: StyleTokens.black
+
+                    Text {
+                        id: shelfCountText
+                        anchors.centerIn: parent
+                        text: FileShelf.count > 99 ? "99+" : String(FileShelf.count)
+                        color: StyleTokens.white
+                        font.family: root.textFontFamily
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: fileShelfBubble.visible
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: islandContainer.showFileShelf(true)
+            }
+        }
+
         Rectangle {
             id: playerCard
             z: 5
@@ -1627,8 +1837,13 @@ PanelWindow {
                 case "app_launcher":
                     return UiSettings.launcherWidth;
                 case "wallpaper_picker":
+                case "file_shelf":
                     return 1100;
                 case "clipboard_history":
+                    return 520;
+                case "month_calendar":
+                    return 420;
+                case "weather":
                     return 460;
                 case "polkit_auth":
                     return 420;
@@ -1661,9 +1876,13 @@ PanelWindow {
                 case "app_launcher":
                     return 390;
                 case "wallpaper_picker":
+                case "file_shelf":
                     return 260;
                 case "clipboard_history":
-                    return 390;
+                    return clipboardHistoryLoader.item && clipboardHistoryLoader.item.imgFullPreview ? 400 : 350;
+                case "month_calendar":
+                case "weather":
+                    return 340;
                 case "polkit_auth":
                     return 260;
                 case "calendar":
@@ -1693,8 +1912,11 @@ PanelWindow {
                 case "app_launcher":
                     return UiSettings.panelRadius;
                 case "wallpaper_picker":
+                case "file_shelf":
                     return UiSettings.panelRadius;
                 case "clipboard_history":
+                case "month_calendar":
+                case "weather":
                     return UiSettings.panelRadius;
                 case "polkit_auth":
                     return UiSettings.panelRadius;
@@ -2176,6 +2398,7 @@ PanelWindow {
                         textFontFamily: root.textFontFamily
                         showCondition: islandContainer.calendarLayerVisible
                         visibleDays: UiSettings.calendarDays
+                        onDayClicked: (year, month, day) => islandContainer.showMonthCalendar(year, month, day)
                     }
                 }
             }
@@ -2275,6 +2498,101 @@ PanelWindow {
                         onCloseRequested: islandContainer.smartRestoreState()
                     }
                 }
+            }
+
+            Loader {
+                id: monthCalendarLoader
+                anchors.fill: parent
+                active: islandContainer.monthCalendarLayerVisible
+                asynchronous: false
+                visible: islandContainer.monthCalendarLayerVisible
+                sourceComponent: Component {
+                    CalendarLayer {
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        heroFontFamily: root.heroFontFamily
+                        startYear: islandContainer.monthCalendarYear
+                        startMonth: islandContainer.monthCalendarMonth
+                        startDay: islandContainer.monthCalendarDay
+                        showCondition: islandContainer.monthCalendarLayerVisible
+                        onCloseRequested: islandContainer.smartRestoreState()
+                    }
+                }
+            }
+
+            Loader {
+                id: weatherLoader
+                anchors.fill: parent
+                active: islandContainer.weatherLayerVisible
+                asynchronous: false
+                visible: islandContainer.weatherLayerVisible
+                sourceComponent: Component {
+                    WeatherLayer {
+                        weatherService: root.weatherService
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        heroFontFamily: root.heroFontFamily
+                        showCondition: islandContainer.weatherLayerVisible
+                        onCloseRequested: islandContainer.smartRestoreState()
+                    }
+                }
+            }
+
+            Loader {
+                id: fileShelfLoader
+                anchors.fill: parent
+                active: islandContainer.fileShelfLayerVisible
+                asynchronous: false
+                visible: islandContainer.fileShelfLayerVisible
+                sourceComponent: Component {
+                    FileShelfLayer {
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        showCondition: islandContainer.fileShelfLayerVisible
+                        dropPreviewOnly: !islandContainer.fileShelfOpenedManually
+                        onCloseRequested: islandContainer.smartRestoreState()
+                    }
+                }
+            }
+
+            // Dragging files over the island opens the shelf; dropping stores them.
+            DropArea {
+                id: islandFileDropArea
+                z: 10000
+                anchors.fill: parent
+                enabled: islandContainer.fileShelfLayerVisible || islandContainer.fileShelfCanAutoOpen
+
+                onEntered: drag => {
+                    if (!islandContainer.dragCarriesFiles(drag)) {
+                        drag.accepted = false;
+                        return;
+                    }
+                    drag.accept(Qt.CopyAction);
+                    if (!islandContainer.fileShelfLayerVisible)
+                        islandContainer.showFileShelf(false);
+                }
+
+                onExited: islandContainer.closeAutoOpenedFileShelf()
+
+                onDropped: drop => {
+                    if (!islandContainer.dragCarriesFiles(drop)) {
+                        drop.accepted = false;
+                        return;
+                    }
+                    islandContainer.addFilesFromDrop(drop);
+                    drop.accept(Qt.CopyAction);
+                    islandContainer.closeAutoOpenedFileShelf();
+                }
+            }
+
+            Rectangle {
+                z: 9999
+                anchors.fill: parent
+                radius: mainCapsule.radius
+                color: "transparent"
+                border.width: islandFileDropArea.containsDrag ? 2 : 0
+                border.color: StyleTokens.accent
+                visible: islandFileDropArea.containsDrag
             }
 
             Loader {
@@ -2388,6 +2706,10 @@ PanelWindow {
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
                         showCondition: islandContainer.controlCenterLayerVisible
+                        weatherService: root.weatherService
+                        onWeatherRequested: islandContainer.showWeather()
+                        onCloseRequested: islandContainer.smartRestoreState()
+                        onCalendarRequested: islandContainer.showMonthCalendar()
                     }
                 }
             }
@@ -2456,6 +2778,19 @@ PanelWindow {
             detailHeight: root.connectivityDetailHeight
             detailGap: root.connectivityDetailGap
             iconFontFamily: root.iconFontFamily
+            textFontFamily: root.textFontFamily
+            heroFontFamily: root.heroFontFamily
+        }
+
+        CalendarNoteShell {
+            id: calendarNoteShell
+
+            open: islandContainer.monthCalendarLayerVisible
+                && monthCalendarLoader.item !== null
+                && monthCalendarLoader.item.noteOpen
+            provider: monthCalendarLoader.item
+            mainCapsule: mainCapsule
+            availableWidth: root.width
             textFontFamily: root.textFontFamily
             heroFontFamily: root.heroFontFamily
         }

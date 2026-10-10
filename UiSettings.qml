@@ -33,6 +33,12 @@ Singleton {
     property alias clock24h: store.clock24h
     property alias calendarDays: store.calendarDays
 
+    // ---- Weather (control center) ----
+    property alias weatherEnabled: store.weatherEnabled
+    property alias weatherLocation: store.weatherLocation
+    property alias weatherUnits: store.weatherUnits
+    property alias weatherRefreshInterval: store.weatherRefreshInterval
+
     // ---- Appearance ----
     property alias pillColor: store.pillColor
     property alias pillOpacity: store.pillOpacity
@@ -97,6 +103,13 @@ Singleton {
     function resetClockAndDate() {
         store.clock24h = true;
         store.calendarDays = 5;
+    }
+
+    function resetWeather() {
+        store.weatherEnabled = true;
+        store.weatherLocation = "";
+        store.weatherUnits = "metric";
+        store.weatherRefreshInterval = 1800000;
     }
 
     function resetAppearance() {
@@ -183,6 +196,11 @@ Singleton {
 
             property bool clock24h: true
             property int calendarDays: 5
+
+            property bool weatherEnabled: true
+            property string weatherLocation: ""
+            property string weatherUnits: "metric"
+            property int weatherRefreshInterval: 1800000
 
             property string pillColor: "#000000"
             property int pillOpacity: 100

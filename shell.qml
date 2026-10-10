@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 import IslandBackend
+import "qml/island"
 
 Scope {
     id: shellRoot
@@ -12,6 +13,30 @@ Scope {
     property bool settingsOpen: false
 
     readonly property var userConfig: UserConfig
+
+    readonly property string clipboardHelperScriptPath: {
+        const candidate = Qt.resolvedUrl("scripts/cliphist-helper.sh").toString();
+        return candidate.startsWith("file://")
+            ? decodeURIComponent(candidate.substring(7))
+            : "/usr/share/tide-island/scripts/cliphist-helper.sh";
+    }
+
+    // Keeps clipboard history recording for as long as the shell runs,
+    // even while the clipboard panel is closed.
+    Process {
+        command: ["bash", shellRoot.clipboardHelperScriptPath, "watch"]
+        running: true
+    }
+
+    // One weather fetcher shared by every monitor's window.
+    WeatherService {
+        id: globalWeatherService
+        weatherEnabled: UiSettings.weatherEnabled
+        location: UiSettings.weatherLocation
+        units: UiSettings.weatherUnits
+        refreshInterval: UiSettings.weatherRefreshInterval
+    }
+    readonly property var weatherService: globalWeatherService
 
     readonly property var primaryScreen: Quickshell.primaryScreen ?? (Quickshell.screens.length > 0 ? Quickshell.screens[0] : null)
 
@@ -111,6 +136,18 @@ Scope {
                     ic.showWallpaperPicker();
             });
         }
+        function toggleFileShelf() {
+            shellRoot.forEachWindow(window => {
+                if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)
+                    return;
+                const ic = window.islandContainerRef;
+                if (ic.islandState === "file_shelf")
+                    ic.smartRestoreState();
+                else
+                    ic.showFileShelf(true);
+            });
+        }
+
         function toggleClipboardHistory() {
             shellRoot.forEachWindow(window => {
                 if (!window || !window.islandContainerRef || window.hyprMonitor !== Hyprland.focusedMonitor)

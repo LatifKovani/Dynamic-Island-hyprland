@@ -13,6 +13,9 @@ Item {
     property color clockColor: "white"
     property color weekendColor: "#ff6b6b"
 
+    // Emitted when a day in the strip is clicked (month is 0-based, like Date).
+    signal dayClicked(int year, int month, int day)
+
     property int visibleDays: 5
     readonly property int windowRadius: Math.floor(Math.max(1, visibleDays) / 2)
     readonly property var dayInitials: ["S", "M", "T", "W", "T", "F", "S"]
@@ -28,6 +31,8 @@ Item {
             const dow = d.getDay();
             list.push({
                 dayNum: d.getDate(),
+                year: d.getFullYear(),
+                month: d.getMonth(),
                 label: offset === 0 ? dayShortNames[dow] : dayInitials[dow],
                 isToday: offset === 0,
                 isWeekend: dow === 0 || dow === 6,
@@ -76,10 +81,18 @@ Item {
                 opacity: modelData.fade
 
                 Rectangle {
-                    visible: modelData.isToday
+                    visible: modelData.isToday || dayMouse.containsMouse
                     anchors.fill: parent
                     radius: width / 2
-                    color: Qt.rgba(1, 1, 1, 0.08)
+                    color: Qt.rgba(1, 1, 1, modelData.isToday ? 0.08 : 0.06)
+                }
+
+                MouseArea {
+                    id: dayMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.dayClicked(modelData.year, modelData.month, modelData.dayNum)
                 }
 
                 Text {

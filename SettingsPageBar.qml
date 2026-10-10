@@ -71,21 +71,6 @@ SettingsPage {
                 onToggled: v => UiSettings.hoverCalendar = v
             }
         }
-        SettingsRow {
-            title: "Hover the album circle opens the player"
-            SettingsSwitch {
-                checked: UiSettings.hoverPlayerCard
-                onToggled: v => UiSettings.hoverPlayerCard = v
-            }
-        }
-        SettingsRow {
-            title: "Hover the status circle opens the control center"
-            description: "When off, the control center only opens on click"
-            SettingsSwitch {
-                checked: UiSettings.hoverControlCenter
-                onToggled: v => UiSettings.hoverControlCenter = v
-            }
-        }
         SettingsSlider {
             title: "Calendar / player close delay"
             description: "How long they stay after the pointer leaves"
@@ -94,27 +79,8 @@ SettingsPage {
             stepSize: 50
             unit: "ms"
             value: UiSettings.hoverCloseDelay
-            onMoved: v => UiSettings.hoverCloseDelay = v
-        }
-        SettingsSlider {
-            title: "Control center close delay"
-            from: 0
-            to: 3000
-            stepSize: 50
-            unit: "ms"
-            value: UiSettings.controlCenterCloseDelay
-            onMoved: v => UiSettings.controlCenterCloseDelay = v
-        }
-        SettingsSlider {
-            title: "Control center open delay"
-            description: "Pause before hovering the status circle opens it"
-            from: 0
-            to: 1000
-            stepSize: 20
-            unit: "ms"
-            value: UiSettings.statusHoverOpenDelay
             last: true
-            onMoved: v => UiSettings.statusHoverOpenDelay = v
+            onMoved: v => UiSettings.hoverCloseDelay = v
         }
     }
 
